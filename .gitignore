@@ -6,4 +6,4 @@
 *.mp4
 
 # Model
-/model
+*.gguf
