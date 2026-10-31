@@ -1,9 +1,2 @@
-# Credentials
-/credentials.json
-/token.json
-
 # Ignore all MP4 files everywhere
 *.mp4
-
-# Model
-*.gguf
