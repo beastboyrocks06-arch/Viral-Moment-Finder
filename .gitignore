@@ -3,3 +3,8 @@
 
 # Model
 *.gguf
+
+models/*.gguf
+videos/
+clips/
+downloads/
