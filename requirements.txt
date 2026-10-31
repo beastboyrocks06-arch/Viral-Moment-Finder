@@ -1,0 +1,5 @@
+yt-dlp
+faster-whisper
+huggingface_hub
+python-dotenv
+json-repair
