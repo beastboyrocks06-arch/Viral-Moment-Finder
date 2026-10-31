@@ -5,7 +5,7 @@ import random
 import tempfile
 import traceback
 from pathlib import Path
-
+import csv
 import numpy as np
 from PIL import Image
 
@@ -35,7 +35,7 @@ OUTPUT_DIR = BASE_DIR / "clips"
 STICKER_DIR = BASE_DIR / "sticker"
 POP_SFX = BASE_DIR / "sfx" / "pop_click.mp3"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
+QUEUE_FILE = BASE_DIR / "viral_video_queue.csv"
 WIDTH, HEIGHT, FPS = 1080, 1920, 30
 MIN_DURATION, MAX_DURATION = 20, 60
 
@@ -484,7 +484,7 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
     print(f"HIGHLIGHTS: {highlight_words}")
     print("=" * 60)
 
-    output_path = OUTPUT_DIR / f"{Path(video_id).stem}_moment_{moment_index:02d}.mp4"
+    output_path = OUTPUT_DIR / f"{Path(video_id).stem}_{moment_index:02d}.mp4"
 
     if output_path.exists():
         print(f"[SKIP] Already exists: {output_path.name}")
@@ -650,7 +650,6 @@ def process_result(json_path, video_override=None):
 # ============================================================
 # MAIN
 # ============================================================
-
 def main(json_file=None, video_file=None):
     initialize()
 
@@ -659,6 +658,7 @@ def main(json_file=None, video_file=None):
             "caption_generator.py must contain generate_caption_overlay()."
         )
 
+    # Manual single-JSON processing
     if json_file:
         json_path = Path(json_file)
         if not json_path.is_absolute():
@@ -671,28 +671,43 @@ def main(json_file=None, video_file=None):
         process_result(json_path, video_file)
         return
 
-    result_files = sorted(RESULTS_DIR.glob("*_clips.json"))
+    # Automatic CSV queue processing
+    with QUEUE_FILE.open("r", encoding="utf-8-sig", newline="") as file:
+        rows = list(csv.DictReader(file))
 
-    if not result_files:
-        print("[INFO] No *_clips.json files found in results.")
-        return
+    for row in rows:
+        video = row["video_title"].strip()
 
-    print(f"[INFO] Found {len(result_files)} JSON file(s).")
+        if row["json_done"].strip().lower() != "true":
+            continue
 
-    for json_path in result_files:
+        if row["post_done"].strip().lower() == "true":
+            continue
+
+        json_path = RESULTS_DIR / f"{Path(video).stem}.json"
+
+        if not json_path.exists():
+            print(f"[SKIP] JSON missing: {json_path.name}")
+            continue
+
+        print(f"\n[QUEUE] Processing: {video}")
+
         try:
-            process_result(json_path, video_file)
+            process_result(json_path, video)
         except KeyboardInterrupt:
             print("\n[STOP] Interrupted.")
             break
         except Exception as error:
-            print(f"[ERROR] {json_path.name}: {error}")
+            print(f"[ERROR] {video}: {error}")
             traceback.print_exc()
 
     print("\n" + "=" * 60)
-    print("CLIP GENERATION FINISHED")
+    print("CLIP GENERATION QUEUE FINISHED")
     print("=" * 60)
 
-
 if __name__ == "__main__":
-    main("$1 vs $100,000,000 Car!_1080p_clips.json", "$1 vs $100,000,000 Car!_1080p.mp4")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", help="Process a specific JSON file")
+    parser.add_argument("--video", help="Source video filename")
+    args = parser.parse_args()
+    main(args.json, args.video)

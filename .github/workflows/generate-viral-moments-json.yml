@@ -1,17 +1,17 @@
 
-name: Nightly Viral Moment JSON Generator
+name: Viral Moment JSON Generator
 
 on:
   schedule:
-    # Every day at 9:00 PM India time (15:30 UTC)
-    - cron: "30 15 * * *"
+    # Every day at 5:00 PM India time (11:30 UTC)
+    - cron: "30 11 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: viral-json-generator
+  group: viral-moment-json-generator
   cancel-in-progress: false
 
 jobs:
@@ -49,14 +49,14 @@ jobs:
 
       - name: Generate pending JSON files
         run: |
-          python queue_json_generator.py
+          python viral_moment_json_generator.py
 
       - name: Commit generated JSON and queue updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add viral_video_queue.csv viral_moments/results/
+          git add viral_video_queue.csv results/
 
           if ! git diff --cached --quiet; then
             git commit -m "chore: generate nightly viral moment JSON"

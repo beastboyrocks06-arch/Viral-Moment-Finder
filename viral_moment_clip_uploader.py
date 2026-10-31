@@ -111,34 +111,17 @@ def load_video_json(video_title):
     return json_file, data, moments
 
 
-def get_moment_id(moment, index):
-    value = moment.get("id", moment.get("moment_id", index))
-
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return index
-
-
 def get_clip_path(video_title, moment, index):
     video_stem = Path(video_title).stem
-    moment_id = get_moment_id(moment, index)
+    moment_id = str(moment.get("id") or f"{index:02d}").zfill(2)
+    expected = CLIPS_DIR / f"{video_stem}_{moment_id}.mp4"
 
-    candidates = [
-        CLIPS_DIR / f"{video_stem}_moment_{moment_id:02d}.mp4",
-        CLIPS_DIR / f"{video_stem}_{moment_id:02d}.mp4",
-        CLIPS_DIR / f"{video_stem}_{moment_id}.mp4",
-    ]
+    if expected.exists():
+        return expected
 
-    for path in candidates:
-        if path.exists():
-            return path
-
-    expected = candidates[0]
     raise FileNotFoundError(
         f"Clip not found for moment {moment_id}. Expected: {expected}"
     )
-
 
 def clean_tags(*values):
     tags = {"shorts", "viral", "viralshorts"}
