@@ -4,3 +4,6 @@
 
 # Ignore all MP4 files everywhere
 *.mp4
+
+# Model
+/model
