@@ -259,7 +259,7 @@ def save_queue(queue_path, fieldnames, rows):
                 file,
                 fieldnames=fieldnames,
                 extrasaction="ignore",
-                quoting=csv.QUOTE_MINIMAL
+                quoting=csv.QUOTE_ALL
             )
             writer.writeheader()
             writer.writerows(rows)
