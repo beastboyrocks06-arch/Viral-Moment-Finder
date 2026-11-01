@@ -111,7 +111,7 @@ jobs:
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
           GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
         run: |
-          python viral_moments/clip_generator.py
+          python viral_clip_generator.py
 
       - name: Upload generated clips
         if: >

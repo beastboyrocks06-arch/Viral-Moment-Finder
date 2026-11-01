@@ -1,4 +1,3 @@
-
 name: Viral Moment JSON Generator
 
 on:
@@ -26,6 +25,7 @@ jobs:
   generate-json:
     runs-on: ubuntu-latest
     timeout-minutes: 360
+
     env:
       ENV: PROD
       CHANNEL: ${{ github.event.inputs.channel || 'VIRAL_MOMENT' }}
@@ -40,6 +40,26 @@ jobs:
         with:
           path: models/qwen2.5-1.5b-instruct-q4_k_m.gguf
           key: qwen2.5-1.5b-instruct-q4_k-m-v1
+
+      - name: Verify Qwen Model Cache
+        run: |
+          MODEL="models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+
+          if [ ! -s "$MODEL" ]; then
+            echo "::error::Qwen model cache missing or not restored."
+            echo "Run the Prepare Qwen Model workflow on the default branch first."
+            exit 1
+          fi
+
+          SIZE=$(stat -c%s "$MODEL")
+
+          if [ "$SIZE" -lt 500000000 ]; then
+            echo "::error::Qwen model file is incomplete or invalid."
+            exit 1
+          fi
+
+          ls -lh "$MODEL"
+          echo "Qwen model cache restored successfully."
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -58,25 +78,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Verify model file
-        run: |
-          MODEL="models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
-
-          if [ ! -f "$MODEL" ]; then
-            echo "::error::Qwen model cache missing. Run Prepare Qwen Model workflow."
-            exit 1
-          fi
-
-          SIZE=$(stat -c%s "$MODEL")
-
-          if [ "$SIZE" -lt 500000000 ]; then
-            echo "::error::Model file is incomplete or invalid."
-            exit 1
-          fi
-
-          ls -lh "$MODEL"
-          echo "Qwen model verified successfully."
-
       - name: Test Google Drive Connection
         env:
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
@@ -92,20 +93,26 @@ jobs:
               json.loads(os.environ['GDRIVE_CREDENTIALS']),
               scopes=['https://www.googleapis.com/auth/drive']
           )
+
           drive = build('drive', 'v3', credentials=credentials)
 
           for folder in ['GDRIVE_SOURCE_FOLDER_ID', 'GDRIVE_JSON_FOLDER_ID']:
               result = drive.files().get(
                   fileId=os.environ[folder],
-                  fields='id,name,mimeType'
+                  fields='id,name,mimeType',
+                  supportsAllDrives=True
               ).execute()
+
               if result['mimeType'] != 'application/vnd.google-apps.folder':
                   raise RuntimeError(f'{folder} is not a Google Drive folder')
+
               print(f'{folder}: {result["name"]} - OK')
           "
 
       - name: Generate pending JSON files
         env:
+          ENV: PROD
+          CHANNEL: VIRAL_MOMENT
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
           GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
@@ -119,7 +126,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add viral_video_queue.csv results/
+          git add viral_moment_queue.csv viral_documentary_queue.csv results/
 
           if ! git diff --cached --quiet; then
             git commit -m "chore: generate $CHANNEL JSON"
