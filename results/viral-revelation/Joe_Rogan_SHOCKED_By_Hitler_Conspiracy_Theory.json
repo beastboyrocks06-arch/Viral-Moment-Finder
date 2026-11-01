@@ -25,13 +25,8 @@
       "highlight_words": [],
       "duration": 45.0,
       "posted": false,
-      "clips": [
-        {
-          "clip_id": "clip_01",
-          "start": 125.5,
+      "start": 125.5,
           "end": 170.5
-        }
-      ]
     },
     {
       "id": "02",
@@ -51,13 +46,9 @@
       ],
       "duration": 30.0,
       "posted": false,
-      "clips": [
-        {
-          "clip_id": "clip_02",
-          "start": 375.5,
+      "start": 375.5,
           "end": 405.5
-        }
-      ]
+     
     }
   ]
 }
