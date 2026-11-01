@@ -368,7 +368,7 @@ def main(file_name):
         "moments": moments
     }
 
-    output_path = RESULTS_DIR / f"{video_path.stem}.json"
+    output_path = RESULTS_DIR / f"{video_path.stem}_clips.json"
     with open(output_path, "w", encoding="utf-8") as file:
         json.dump(output, file, indent=2, ensure_ascii=False)
 

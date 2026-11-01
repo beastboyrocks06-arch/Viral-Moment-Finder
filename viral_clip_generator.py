@@ -1,7 +1,7 @@
 import argparse
 import csv
-import io
 import json
+import math
 import os
 import random
 import tempfile
@@ -17,24 +17,39 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-from moviepy import VideoFileClip, ImageClip, CompositeVideoClip, CompositeAudioClip
+from moviepy import (
+    VideoFileClip,
+    ImageClip,
+    CompositeVideoClip,
+    CompositeAudioClip,
+    concatenate_videoclips
+)
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.video.fx import FadeIn
 
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
 load_dotenv()
-BASE_DIR = Path(__file__).resolve().parent.parent
+
+BASE_DIR = Path(__file__).resolve().parent
 
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 import caption_generator as caption
 
+
 class Channel(Enum):
     VIRAL_MOMENT = "viral-moment"
     DOCUMENTARY_MOMENT = "documentary-moment"
+    REVELATION_MOMENT = "revelation-moment"
+
 
 ENV = os.getenv("ENV", "DEV").upper()
-CHANNEL = Channel[os.getenv("CHANNEL", "VIRAL_MOMENT").upper()]
+CHANNEL = Channel[os.getenv("CHANNEL", "REVELATION_MOMENT").upper()]
 
 CHANNEL_CONFIG = {
     Channel.VIRAL_MOMENT: {
@@ -46,6 +61,11 @@ CHANNEL_CONFIG = {
         "queue": BASE_DIR / "viral_documentary_queue.csv",
         "results": BASE_DIR / "results" / "documentary-moment",
         "clips": BASE_DIR / "clips" / "documentary-moment",
+    },
+    Channel.REVELATION_MOMENT: {
+        "queue": BASE_DIR / "viral_moment_queue.csv",
+        "results": BASE_DIR / "results" / "revelation-moment",
+        "clips": BASE_DIR / "clips" / "revelation-moment",
     },
 }
 
@@ -61,13 +81,17 @@ STICKER_DIR = BASE_DIR / "sticker"
 POP_SFX = BASE_DIR / "sfx" / "pop_click.mp3"
 
 WIDTH, HEIGHT, FPS = 1080, 1920, 30
-MIN_DURATION, MAX_DURATION = 30, 90
+
+MIN_DURATION = 30
+MAX_DURATION = 90
+
+# Revelation finder currently generates 30-60 second moments.
+REVELATION_MIN_DURATION = 30
+REVELATION_MAX_DURATION = 60
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 GDRIVE_SOURCE_FOLDER_ID = os.getenv("GDRIVE_SOURCE_FOLDER_ID")
 GDRIVE_JSON_FOLDER_ID = os.getenv("GDRIVE_JSON_FOLDER_ID")
-
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 CAPTION_STYLES = [
     caption.CONFIG_STYLE_1,
@@ -83,7 +107,6 @@ ENABLE_POP_SOUND = True
 
 MIN_STICKERS = 1
 MAX_STICKERS = 3
-STICKER_MAX_WIDTH = 700
 STICKER_TARGET_WIDTH = 650
 STICKER_MIN_DURATION = 1.5
 STICKER_MAX_DURATION = 2.5
@@ -91,7 +114,12 @@ STICKER_MAX_DURATION = 2.5
 VIDEO_EXTENSIONS = {
     ".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v"
 }
-IMAGE_EXTENSIONS = {".png", ".webp", ".jpg", ".jpeg"}
+
+IMAGE_EXTENSIONS = {
+    ".png", ".webp", ".jpg", ".jpeg"
+}
+
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================
@@ -103,38 +131,49 @@ def initialize():
         folder.mkdir(parents=True, exist_ok=True)
 
     print("\n" + "=" * 60)
-    print("VIRAL MOMENT CLIP GENERATOR")
+    print("UNIVERSAL CLIP GENERATOR")
     print("=" * 60)
     print(f"Environment: {ENV}")
-    print(f"Channel:     {CHANNEL.value}")
+    print(f"Channel:     {CHANNEL.name}")
     print(f"Queue:       {QUEUE_FILE}")
     print(f"Videos:      {VIDEO_DIR}")
     print(f"Results:     {RESULTS_DIR}")
     print(f"Output:      {OUTPUT_DIR}")
+    print("=" * 60)
+
+
+# ============================================================
+# GOOGLE DRIVE
+# ============================================================
 
 def get_drive():
-    credentials_json = os.getenv("GDRIVE_CREDENTIALS")
+    credentials_json = os.getenv("GDRIVE_CREDENTIALS", "").strip()
+    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
 
     if credentials_json:
         credentials = Credentials.from_service_account_info(
             json.loads(credentials_json),
             scopes=SCOPES
         )
-    else:
-        credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        if not credentials_path:
-            raise RuntimeError("Google Drive credentials are not configured.")
-
+    elif credentials_path:
         credentials = Credentials.from_service_account_file(
             credentials_path,
             scopes=SCOPES
         )
+    else:
+        raise RuntimeError("Google Drive credentials are not configured.")
 
-    return build("drive", "v3", credentials=credentials, cache_discovery=False)
+    return build(
+        "drive",
+        "v3",
+        credentials=credentials,
+        cache_discovery=False
+    )
 
 
 def find_drive_file(service, folder_id, filename):
     escaped_name = filename.replace("\\", "\\\\").replace("'", "\\'")
+
     query = (
         f"'{folder_id}' in parents and "
         f"name = '{escaped_name}' and trashed = false"
@@ -143,7 +182,9 @@ def find_drive_file(service, folder_id, filename):
     response = service.files().list(
         q=query,
         fields="files(id,name)",
-        pageSize=10
+        pageSize=10,
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True
     ).execute()
 
     files = response.get("files", [])
@@ -154,16 +195,92 @@ def download_drive_file(service, file_id, destination):
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
 
-    request = service.files().get_media(fileId=file_id)
+    temp_path = destination.with_name(destination.name + ".part")
 
-    with destination.open("wb") as file:
-        downloader = MediaIoBaseDownload(file, request)
-        done = False
+    try:
+        request = service.files().get_media(
+            fileId=file_id,
+            supportsAllDrives=True
+        )
 
-        while not done:
-            _, done = downloader.next_chunk()
+        with temp_path.open("wb") as file:
+            downloader = MediaIoBaseDownload(file, request)
+            done = False
 
-    return destination
+            while not done:
+                _, done = downloader.next_chunk()
+
+        if not temp_path.exists() or temp_path.stat().st_size == 0:
+            raise RuntimeError("Downloaded file is empty.")
+
+        temp_path.replace(destination)
+        return destination
+
+    except Exception:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise
+
+
+def get_result_json(filename, service=None):
+    local_path = RESULTS_DIR / filename
+
+    if local_path.exists() and local_path.stat().st_size > 0:
+        return local_path
+
+    if ENV != "PROD":
+        return None
+
+    if not service or not GDRIVE_JSON_FOLDER_ID:
+        raise RuntimeError("Drive JSON folder or service is not configured.")
+
+    drive_filename = f"{CHANNEL.value}__{filename}"
+
+    drive_file = find_drive_file(
+        service,
+        GDRIVE_JSON_FOLDER_ID,
+        drive_filename
+    )
+
+    if not drive_file:
+        print(f"[DRIVE] JSON not found: {drive_filename}")
+        return None
+
+    print(f"[DRIVE] Downloading JSON: {drive_filename}")
+
+    return download_drive_file(
+        service,
+        drive_file["id"],
+        local_path
+    )
+
+
+# ============================================================
+# SOURCE VIDEO DISCOVERY
+# ============================================================
+
+def find_source_video(filename):
+    requested = Path(filename)
+
+    exact_path = VIDEO_DIR / requested.name
+
+    if exact_path.exists():
+        return exact_path
+
+    if not VIDEO_DIR.exists():
+        return None
+
+    for path in VIDEO_DIR.iterdir():
+        if not path.is_file():
+            continue
+
+        if path.suffix.lower() not in VIDEO_EXTENSIONS:
+            continue
+
+        if path.stem.lower() == requested.stem.lower():
+            return path
+
+    return None
 
 
 def get_source_video(filename, service=None):
@@ -178,74 +295,110 @@ def get_source_video(filename, service=None):
     if not service or not GDRIVE_SOURCE_FOLDER_ID:
         raise RuntimeError("Drive source folder or service is not configured.")
 
-    drive_file = find_drive_file(service, GDRIVE_SOURCE_FOLDER_ID, Path(filename).name)
+    drive_filename = Path(filename).name
+
+    drive_file = find_drive_file(
+        service,
+        GDRIVE_SOURCE_FOLDER_ID,
+        drive_filename
+    )
 
     if not drive_file:
-        print(f"[DRIVE] Source video not found: {filename}")
+        print(f"[DRIVE] Source video not found: {drive_filename}")
         return None
 
-    destination = VIDEO_DIR / Path(filename).name
-    print(f"[DRIVE] Downloading source video: {filename}")
+    destination = VIDEO_DIR / drive_filename
 
-    return download_drive_file(service, drive_file["id"], destination)
+    print(f"[DRIVE] Downloading source video: {drive_filename}")
 
+    return download_drive_file(
+        service,
+        drive_file["id"],
+        destination
+    )
 
-def get_result_json(filename, service=None):
-    local_path = RESULTS_DIR / filename
-
-    if local_path.exists():
-        return local_path
-
-    if ENV != "PROD":
-        return None
-
-    if not service or not GDRIVE_JSON_FOLDER_ID:
-        raise RuntimeError("Drive JSON folder or service is not configured.")
-
-    drive_filename = f"{CHANNEL.value}__{filename}"
-    drive_file = find_drive_file(service, GDRIVE_JSON_FOLDER_ID, drive_filename)
-
-    if not drive_file:
-        print(f"[DRIVE] JSON not found: {drive_filename}")
-        return None
-
-    print(f"[DRIVE] Downloading JSON: {drive_filename}")
-    return download_drive_file(service, drive_file["id"], local_path)
 
 # ============================================================
-# FILE DISCOVERY
+# JSON
 # ============================================================
-
-def find_source_video(filename):
-    requested = Path(filename)
-
-    # Exact filename match
-    exact_path = VIDEO_DIR / requested.name
-    if exact_path.exists():
-        return exact_path
-
-    # Match by filename without extension
-    for path in VIDEO_DIR.iterdir():
-        if path.is_file() and path.suffix.lower() in VIDEO_EXTENSIONS:
-            if path.stem.lower() == requested.stem.lower():
-                return path
-
-    return None
-
 
 def load_json(path):
     try:
         with open(path, "r", encoding="utf-8") as file:
             return json.load(file)
+
     except Exception as error:
         print(f"[ERROR] Could not read JSON: {error}")
         return None
+
 
 # ============================================================
 # MOMENT VALIDATION
 # ============================================================
 
 def validate_moment(moment, video_duration):
+    if CHANNEL == Channel.REVELATION_MOMENT:
+        clips = moment.get("clips")
+
+        if not isinstance(clips, list) or not clips:
+            print("[SKIP] Revelation moment has no clips.")
+            return None
+
+        segments = []
+        total_duration = 0
+
+        for index, clip in enumerate(clips, start=1):
+            if not isinstance(clip, dict):
+                print(f"[SKIP] Invalid segment object: {index}")
+                return None
+
+            try:
+                start = float(clip["start"])
+                end = float(clip["end"])
+            except (KeyError, TypeError, ValueError):
+                print(f"[SKIP] Invalid timestamps in segment {index}.")
+                return None
+
+            if not math.isfinite(start) or not math.isfinite(end):
+                print(f"[SKIP] Non-finite timestamps in segment {index}.")
+                return None
+
+            if start < 0 or end <= start or start >= video_duration:
+                print(
+                    f"[SKIP] Invalid segment {index}: "
+                    f"{start:.2f}s - {end:.2f}s"
+                )
+                return None
+
+            end = min(end, video_duration)
+            segment_duration = end - start
+
+            if segment_duration <= 0:
+                return None
+
+            segments.append((start, end))
+            total_duration += segment_duration
+
+        if not (
+            REVELATION_MIN_DURATION
+            <= total_duration
+            <= REVELATION_MAX_DURATION
+        ):
+            print(
+                f"[SKIP] Revelation duration: {total_duration:.2f}s "
+                f"(allowed: {REVELATION_MIN_DURATION}-"
+                f"{REVELATION_MAX_DURATION}s)"
+            )
+            return None
+
+        print(
+            f"[VALIDATION] Revelation segments: {len(segments)} | "
+            f"Total duration: {total_duration:.2f}s"
+        )
+
+        return segments
+
+    # VIRAL_MOMENT and DOCUMENTARY_MOMENT
     try:
         start = float(moment["start"])
         end = float(moment["end"])
@@ -253,8 +406,13 @@ def validate_moment(moment, video_duration):
         print("[SKIP] Moment has invalid start/end timestamps.")
         return None
 
+    if not math.isfinite(start) or not math.isfinite(end):
+        print("[SKIP] Moment has non-finite timestamps.")
+        return None
+
     start = max(0.0, start)
     end = min(end, video_duration)
+
     duration = end - start
 
     if start >= video_duration:
@@ -265,7 +423,7 @@ def validate_moment(moment, video_duration):
         print(f"[SKIP] Invalid duration: {duration:.2f}s")
         return None
 
-    return start, end
+    return [(start, end)]
 
 
 # ============================================================
@@ -285,7 +443,7 @@ def make_vertical_video(clip):
 
 
 # ============================================================
-# CAPTION GENERATION
+# CAPTIONS
 # ============================================================
 
 def create_captions(audio_path, duration, highlight_words):
@@ -294,8 +452,6 @@ def create_captions(audio_path, duration, highlight_words):
 
     config = random.choice(CAPTION_STYLES).copy()
 
-    # Add AI-selected words to the existing special-word system.
-    # These words will receive the special font/color treatment.
     if hasattr(caption, "SPECIAL_WORDS"):
         caption.SPECIAL_WORDS.update(
             str(word).strip().upper()
@@ -318,6 +474,7 @@ def create_captions(audio_path, duration, highlight_words):
                 .with_start(0)
                 .with_duration(duration)
             )
+
             print("[CAPTIONS] Generated successfully.")
 
         return caption_clip
@@ -329,7 +486,7 @@ def create_captions(audio_path, duration, highlight_words):
 
 
 # ============================================================
-# STICKER ANIMATION
+# STICKERS
 # ============================================================
 
 def get_sticker_files():
@@ -343,8 +500,6 @@ def get_sticker_files():
 
 
 def popup_scale(t, duration):
-    """Large, attention-grabbing popup animation."""
-
     pop_duration = min(0.30, duration)
 
     if t <= 0:
@@ -352,35 +507,22 @@ def popup_scale(t, duration):
 
     if t < pop_duration:
         progress = t / pop_duration
+        return 1.15 * progress + 0.05 * progress * progress
 
-        # Pop to 115%, then settle to 100%
-        return (
-            1.15 * progress
-            + 0.05 * progress * progress
-        )
-
-    # Subtle breathing
     return 1.0 + 0.015 * np.sin(t * 2.0)
+
 
 def create_one_sticker(path, video_duration):
     base = None
 
     try:
-        # -----------------------------------------------------
-        # 1. LOAD IMAGE
-        # -----------------------------------------------------
-
         with Image.open(path) as image:
             image = image.convert("RGBA")
 
             original_w, original_h = image.size
 
             if original_w <= 0 or original_h <= 0:
-                raise ValueError("Invalid sticker dimensions")
-
-            # -------------------------------------------------
-            # 2. RESIZE TO TARGET DISPLAY WIDTH
-            # -------------------------------------------------
+                raise ValueError("Invalid sticker dimensions.")
 
             scale = STICKER_TARGET_WIDTH / original_w
 
@@ -394,20 +536,12 @@ def create_one_sticker(path, video_duration):
 
             image_array = np.array(image)
 
-        # -----------------------------------------------------
-        # 3. CREATE MOVIEPY CLIP
-        # -----------------------------------------------------
-
         base = ImageClip(
             image_array,
             transparent=True
         )
 
         original_w, original_h = base.size
-
-        # -----------------------------------------------------
-        # 4. RANDOM TIMING
-        # -----------------------------------------------------
 
         max_start = max(
             0,
@@ -428,10 +562,6 @@ def create_one_sticker(path, video_duration):
             base.close()
             return None, None
 
-        # -----------------------------------------------------
-        # 5. POSITION
-        # -----------------------------------------------------
-
         side = random.choice(["left", "right"])
         vertical = random.choice(["top", "middle"])
 
@@ -441,36 +571,16 @@ def create_one_sticker(path, video_duration):
             else WIDTH - original_w - 65
         )
 
-        y = (
-            260
-            if vertical == "top"
-            else 720
-        )
+        y = 260 if vertical == "top" else 720
 
-        # Keep sticker inside frame
-        x = max(
-            15,
-            min(x, WIDTH - original_w - 15)
-        )
-
-        y = max(
-            100,
-            min(y, HEIGHT - original_h - 100)
-        )
-
-        # -----------------------------------------------------
-        # 6. POPUP ANIMATION
-        # -----------------------------------------------------
+        x = max(15, min(x, WIDTH - original_w - 15))
+        y = max(100, min(y, HEIGHT - original_h - 100))
 
         def scale_at(t):
-            return max(
-                0.05,
-                popup_scale(t, duration)
-            )
+            return max(0.05, popup_scale(t, duration))
 
         def position_at(t):
             scale = scale_at(t)
-
             current_w = original_w * scale
             current_h = original_h * scale
 
@@ -491,10 +601,8 @@ def create_one_sticker(path, video_duration):
         )
 
         print(
-            f"[STICKER] Loaded: {path.name} | "
-            f"Original: {original_w}x{original_h} | "
-            f"Target width: {STICKER_TARGET_WIDTH}px | "
-            f"Start: {start:.2f}s"
+            f"[STICKER] {path.name} | "
+            f"Start: {start:.2f}s | Duration: {duration:.2f}s"
         )
 
         return sticker, start
@@ -510,7 +618,8 @@ def create_one_sticker(path, video_duration):
                 pass
 
         return None, None
-    
+
+
 def create_stickers(duration):
     if not ENABLE_STICKERS:
         return [], []
@@ -579,6 +688,7 @@ def create_final_audio(source_audio, sticker_times, sfx_clips):
                 sfx = AudioFileClip(str(POP_SFX)).with_start(start)
                 sfx_clips.append(sfx)
                 audio_layers.append(sfx)
+
             except Exception as error:
                 print(f"[SFX] Could not load pop sound: {error}")
 
@@ -598,12 +708,18 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
     vertical = None
     captions = None
     final = None
+    final_audio = None
+
+    segment_clips = []
     sticker_clips = []
     sfx_clips = []
-    final_audio = None
 
     title = moment.get("title", "Untitled")
     moment_highlights = moment.get("highlight_words", [])
+
+    if not isinstance(moment_highlights, list):
+        moment_highlights = []
+
     highlight_words = list(dict.fromkeys(
         [*global_highlights, *moment_highlights]
     ))
@@ -615,25 +731,47 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
     print(f"HIGHLIGHTS: {highlight_words}")
     print("=" * 60)
 
-    output_path = OUTPUT_DIR / f"{Path(video_id).stem}_{moment_index:02d}.mp4"
+    output_name = f"{Path(video_id).stem}_{moment_index:02d}"
+    output_path = OUTPUT_DIR / f"{output_name}.mp4"
+    temp_output_path = OUTPUT_DIR / f"{output_name}.temp.mp4"
 
-    if output_path.exists():
+    if output_path.exists() and output_path.stat().st_size > 0:
         print(f"[SKIP] Already exists: {output_path.name}")
         return False
 
     try:
         source = VideoFileClip(str(source_path))
 
-        timestamps = validate_moment(moment, source.duration)
-        if not timestamps:
+        segments = validate_moment(moment, source.duration)
+
+        if not segments:
             return False
 
-        start, end = timestamps
-        moment_clip = source.subclipped(start, end)
+        # Extract source segments in their original order.
+        for index, (start, end) in enumerate(segments, start=1):
+            print(
+                f"[SEGMENT {index}] "
+                f"{start:.2f}s - {end:.2f}s "
+                f"({end - start:.2f}s)"
+            )
+
+            segment_clips.append(
+                source.subclipped(start, end)
+            )
+
+        # Join RevelationClips segments into one Short.
+        if len(segment_clips) == 1:
+            moment_clip = segment_clips[0]
+        else:
+            moment_clip = concatenate_videoclips(
+                segment_clips,
+                method="compose"
+            )
+
         duration = moment_clip.duration
 
-        print(f"[VIDEO] Source: {start:.2f}s - {end:.2f}s")
-        print(f"[VIDEO] Clip duration: {duration:.2f}s")
+        print(f"[VIDEO] Segments: {len(segment_clips)}")
+        print(f"[VIDEO] Combined duration: {duration:.2f}s")
 
         vertical = make_vertical_video(moment_clip)
 
@@ -668,12 +806,12 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
             if final_audio is not None:
                 final = final.with_audio(final_audio)
 
-            output_path.parent.mkdir(parents=True, exist_ok=True)
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
             print("[EXPORT] Rendering vertical video...")
 
             final.write_videofile(
-                str(output_path),
+                str(temp_output_path),
                 fps=FPS,
                 codec="libx264",
                 audio_codec="aac",
@@ -682,6 +820,15 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
                 logger="bar"
             )
 
+        if (
+            not temp_output_path.exists()
+            or temp_output_path.stat().st_size == 0
+        ):
+            raise RuntimeError("Video export failed or produced an empty file.")
+
+        # Publish the final filename only after successful export.
+        temp_output_path.replace(output_path)
+
         print(f"[SUCCESS] Created: {output_path}")
         return True
 
@@ -689,8 +836,12 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
         print(f"[ERROR] Clip generation failed: {error}")
         traceback.print_exc()
 
-        if output_path.exists():
-            output_path.unlink()
+        for path in [temp_output_path]:
+            if path.exists():
+                try:
+                    path.unlink()
+                except Exception:
+                    pass
 
         return False
 
@@ -703,6 +854,7 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
             *sfx_clips,
             vertical,
             moment_clip,
+            *segment_clips,
             source
         ]
 
@@ -711,6 +863,7 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
         for clip in clips_to_close:
             if clip is not None and id(clip) not in seen:
                 seen.add(id(clip))
+
                 try:
                     clip.close()
                 except Exception:
@@ -725,7 +878,8 @@ def process_result(json_path, video_override=None, service=None):
     print(f"\n[JSON] Processing: {json_path.name}")
 
     data = load_json(json_path)
-    if not data:
+
+    if not isinstance(data, dict):
         return
 
     video_filename = video_override or data.get("video")
@@ -743,15 +897,18 @@ def process_result(json_path, video_override=None, service=None):
     print(f"[VIDEO] Found: {source_path.name}")
 
     moments = data.get("moments", [])
+
     if not isinstance(moments, list) or not moments:
         print("[INFO] No moments found in JSON.")
         return
 
     global_highlights = data.get("highlight_words", [])
+
     if not isinstance(global_highlights, list):
         global_highlights = []
 
-    generated = skipped = 0
+    generated = 0
+    skipped = 0
 
     for index, moment in enumerate(moments, start=1):
         if not isinstance(moment, dict):
@@ -776,9 +933,25 @@ def process_result(json_path, video_override=None, service=None):
         f"Generated: {generated} | Skipped: {skipped}"
     )
 
+
 # ============================================================
 # MAIN
 # ============================================================
+
+def resolve_json_path(filename):
+    path = Path(filename)
+
+    if path.is_absolute():
+        return path
+
+    # First check the path supplied from the project root.
+    if path.exists():
+        return path
+
+    # Then check the active channel's results directory.
+    return RESULTS_DIR / path.name
+
+
 def main(json_file=None, video_file=None):
     initialize()
 
@@ -787,45 +960,76 @@ def main(json_file=None, video_file=None):
             "caption_generator.py must contain generate_caption_overlay()."
         )
 
-    # Manual single-JSON processing
-    if json_file:
-        json_path = Path(json_file)
-        if not json_path.is_absolute():
-            json_path = RESULTS_DIR / json_path
+    service = get_drive() if ENV == "PROD" else None
 
-        if not json_path.exists():
-            print(f"[ERROR] JSON file not found: {json_path}")
+    # Manual single-JSON processing.
+    if json_file:
+        json_path = resolve_json_path(json_file)
+
+        if not json_path.exists() and ENV == "PROD":
+            json_path = get_result_json(
+                Path(json_file).name,
+                service
+            )
+
+        if not json_path or not json_path.exists():
+            print(f"[ERROR] JSON file not found: {json_file}")
             return
 
-        process_result(json_path, video_file)
+        process_result(
+            json_path,
+            video_override=video_file,
+            service=service
+        )
         return
 
-    # Automatic CSV queue processing
-    with QUEUE_FILE.open("r", encoding="utf-8-sig", newline="") as file:
+    # Automatic queue processing.
+    if not QUEUE_FILE.exists():
+        print(f"[ERROR] Queue file not found: {QUEUE_FILE}")
+        return
+
+    with QUEUE_FILE.open(
+        "r",
+        encoding="utf-8-sig",
+        newline=""
+    ) as file:
         rows = list(csv.DictReader(file))
 
     for row in rows:
-        video = row["video_title"].strip()
+        video = (row.get("video_title") or "").strip()
 
-        if row["json_done"].strip().lower() != "true":
+        if not video:
             continue
 
-        if row["post_done"].strip().lower() == "true":
+        if (row.get("json_done") or "").strip().lower() != "true":
             continue
 
-        json_path = RESULTS_DIR / f"{Path(video).stem}.json"
+        if (row.get("post_done") or "").strip().lower() == "true":
+            continue
+
+        json_filename = f"{Path(video).stem}.json"
+        json_path = RESULTS_DIR / json_filename
 
         if not json_path.exists():
-            print(f"[SKIP] JSON missing: {json_path.name}")
+            json_path = get_result_json(json_filename, service)
+
+        if not json_path or not json_path.exists():
+            print(f"[SKIP] JSON missing: {json_filename}")
             continue
 
         print(f"\n[QUEUE] Processing: {video}")
 
         try:
-            process_result(json_path, video)
+            process_result(
+                json_path,
+                video_override=video,
+                service=service
+            )
+
         except KeyboardInterrupt:
             print("\n[STOP] Interrupted.")
             break
+
         except Exception as error:
             print(f"[ERROR] {video}: {error}")
             traceback.print_exc()
@@ -834,9 +1038,20 @@ def main(json_file=None, video_file=None):
     print("CLIP GENERATION QUEUE FINISHED")
     print("=" * 60)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--json", help="Process a specific JSON file")
-    parser.add_argument("--video", help="Source video filename")
+
+    parser.add_argument(
+        "--json",
+        help="Process a specific JSON file"
+    )
+
+    parser.add_argument(
+        "--video",
+        help="Source video filename"
+    )
+
     args = parser.parse_args()
+
     main(args.json, args.video)

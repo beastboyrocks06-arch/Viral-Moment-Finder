@@ -1,0 +1,107 @@
+name: Viral Revelation Clip Uploader
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+    - cron: "30 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: youtube-revelation-scheduled-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install google-api-python-client google-auth google-auth-httplib2 python-dotenv
+
+      - name: Download Revelation Moment clips
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: generate-viral-revelation-clips.yml
+          workflow_conclusion: success
+          name: REVELATION_MOMENT-generated-clips
+          path: clips/revelation-moment
+          branch: main
+          if_no_artifact_found: warn
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure YouTube OAuth
+        env:
+          YOUTUBE_CLIENT_SECRETS_B64: ${{ secrets.YOUTUBE_CLIENT_SECRETS_B64 }}
+          YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
+        run: |
+          if [ -z "$YOUTUBE_CLIENT_SECRETS_B64" ] || [ -z "$YOUTUBE_TOKEN_B64" ]; then
+            echo "::error::YouTube OAuth secrets are missing."
+            exit 1
+          fi
+
+          printf '%s' "$YOUTUBE_CLIENT_SECRETS_B64" | base64 --decode > credentials.json
+          printf '%s' "$YOUTUBE_TOKEN_B64" | base64 --decode > token.json
+
+      - name: Verify uploader files
+        run: |
+          test -f viral_moment_clip_uploader.py
+          test -f viral_moment_queue.csv
+
+          mkdir -p clips/revelation-moment
+
+          echo "Revelation Moment clips:"
+          ls -lh clips/revelation-moment/ || true
+
+      - name: Upload Revelation Moment videos
+        env:
+          ENV: PROD
+          CHANNEL: REVELATION_MOMENT
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+          YOUTUBE_PRIVACY_STATUS: private
+        run: |
+          python viral_moment_clip_uploader.py
+
+      - name: Save upload progress
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add viral_moment_queue.csv
+
+          if git diff --cached --quiet; then
+            echo "No queue progress changes to save."
+          else
+            git commit -m "Update Revelation Moment YouTube upload progress"
+            git push
+          fi
+
+      - name: Cleanup OAuth files
+        if: always()
+        run: |
+          rm -f credentials.json token.json

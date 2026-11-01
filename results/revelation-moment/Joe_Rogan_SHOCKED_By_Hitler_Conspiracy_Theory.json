@@ -1,0 +1,63 @@
+{
+  "video": "Joe_Rogan_SHOCKED_By_Hitler_Conspiracy_Theory.mp4",
+  "video_type": "PODCAST",
+  "video_duration": 1139.17,
+  "total_moments": 2,
+  "highlight_words": [
+    "NAZI",
+    "DESCENDANTS",
+    "GERMAN"
+  ],
+  "moments": [
+    {
+      "moment_id": "moment_01",
+      "title": "He Revealed Something Nobody Expected! 😳",
+      "reason": "An unexpected revelation makes this conversation surprising and engaging.",
+      "hook": "I never told anyone this before...",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "duration": 45.0,
+      "posted": false,
+      "clips": [
+        {
+          "clip_id": "clip_01",
+          "start": 125.5,
+          "end": 170.5
+        }
+      ]
+    },
+    {
+      "moment_id": "moment_02",
+      "title": "The Shocking Truth About Nazi Descendants",
+      "reason": "Joe reveals a shocking revelation about isolated German-only communities in South America, which challenges viewers' understanding of Nazi history.",
+      "hook": "I never told anyone this before...",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NAZI"
+      ],
+      "duration": 30.0,
+      "posted": false,
+      "clips": [
+        {
+          "clip_id": "clip_02",
+          "start": 375.5,
+          "end": 405.5
+        }
+      ]
+    }
+  ]
+}

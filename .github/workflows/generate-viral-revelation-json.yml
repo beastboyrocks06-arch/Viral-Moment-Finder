@@ -1,0 +1,122 @@
+name: Viral Revelation JSON Generator
+
+on:
+  schedule:
+    - cron: "30 11 * * *" # Daily, 5 PM IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: viral-revelation-json-generator
+  cancel-in-progress: false
+
+jobs:
+  generate-json:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      ENV: PROD
+      CHANNEL: REVELATION_MOMENT
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore Qwen Model Cache
+        id: qwen-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+          key: qwen2.5-1.5b-instruct-q4_k-m-v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify model file
+        run: |
+          MODEL="models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+
+          if [ ! -f "$MODEL" ]; then
+            echo "::error::Qwen model cache missing. Run Prepare Qwen Model workflow."
+            exit 1
+          fi
+
+          SIZE=$(stat -c%s "$MODEL")
+
+          if [ "$SIZE" -lt 500000000 ]; then
+            echo "::error::Model file is incomplete or invalid."
+            exit 1
+          fi
+
+          ls -lh "$MODEL"
+          echo "Qwen model verified successfully."
+
+      - name: Test Google Drive Connection
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+        run: |
+          python -c "
+          import os, json
+          from google.oauth2.service_account import Credentials
+          from googleapiclient.discovery import build
+
+          credentials = Credentials.from_service_account_info(
+              json.loads(os.environ['GDRIVE_CREDENTIALS']),
+              scopes=['https://www.googleapis.com/auth/drive']
+          )
+          drive = build('drive', 'v3', credentials=credentials)
+
+          for folder in ['GDRIVE_SOURCE_FOLDER_ID', 'GDRIVE_JSON_FOLDER_ID']:
+              result = drive.files().get(
+                  fileId=os.environ[folder],
+                  fields='id,name,mimeType',
+                  supportsAllDrives=True
+              ).execute()
+
+              if result['mimeType'] != 'application/vnd.google-apps.folder':
+                  raise RuntimeError(f'{folder} is not a Google Drive folder')
+
+              print(f'{folder}: {result["name"]} - OK')
+          "
+
+      - name: Generate Revelation JSON files
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+        run: |
+          echo "Environment: $ENV"
+          echo "Channel: $CHANNEL"
+          python viral_moment_json_generator.py
+
+      - name: Commit generated JSON and queue updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add viral_moment_queue.csv results/
+
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: generate $CHANNEL JSON"
+            git push
+          else
+            echo "No changes to commit."
+          fi

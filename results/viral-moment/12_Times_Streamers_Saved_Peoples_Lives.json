@@ -1,0 +1,108 @@
+{
+  "video": "12_Times_Streamers_Saved_Peoples_Lives.mp4",
+  "video_duration": 1064.05,
+  "total_moments": 5,
+  "highlight_words": [
+    "NEVER",
+    "RIPPING"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "01"
+    },
+    {
+      "start": 300.86,
+      "end": 351.54,
+      "duration": 50.68,
+      "title": "This Car Is Worth More Than a Mansion! 💸",
+      "reason": "The discovery of a hidden treasure adds value and excitement to the story.",
+      "hook": "I can't believe we made it!",
+      "score": 93,
+      "score_breakdown": {
+        "hook": 25,
+        "suspense": 24,
+        "emotion": 22,
+        "clarity": 18,
+        "shorts_potential": 18
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "02"
+    },
+    {
+      "start": 375.55,
+      "end": 416.87,
+      "duration": 41.32,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "03"
+    },
+    {
+      "start": 500.0,
+      "end": 539.0,
+      "duration": 39.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "04"
+    },
+    {
+      "start": 1000.69,
+      "end": 1064.05,
+      "duration": 63.36,
+      "title": "This Kid Was Big, Now He's All Ripping the F**k Up!",
+      "reason": "The story of the 17-year-old boy's transformation from suicidal to thriving is compelling and relatable.",
+      "hook": "Look at this!",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "RIPPING"
+      ],
+      "posted": false,
+      "id": "05"
+    }
+  ]
+}

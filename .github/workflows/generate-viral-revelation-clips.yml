@@ -1,0 +1,76 @@
+name: Viral Revelation Clip Generator
+
+on:
+  workflow_run:
+    workflows:
+      - "Viral Revelation JSON Generator"
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: viral-revelation-clip-generator
+  cancel-in-progress: false
+
+jobs:
+  generate-clips:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install google-api-python-client google-auth google-auth-httplib2 python-dotenv
+
+      - name: Verify required files
+        run: |
+          test -f clip_generator.py
+          test -f caption_generator.py
+          test -d sticker
+          test -f viral_moment_queue.csv
+
+      - name: Generate Revelation clips
+        env:
+          ENV: PROD
+          CHANNEL: REVELATION_MOMENT
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+        run: |
+          echo "Environment: $ENV"
+          echo "Channel: $CHANNEL"
+          python clip_generator.py
+
+      - name: Upload generated clips
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: REVELATION_MOMENT-generated-clips
+          path: clips/revelation-moment/*.mp4
+          if-no-files-found: warn
+          retention-days: 7

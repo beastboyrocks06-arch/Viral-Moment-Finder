@@ -91,7 +91,7 @@ jobs:
         env:
           CHANNEL: ${{ matrix.channel }}
         run: |
-          test -f viral_moments/clip_generator.py
+          test -f viral_clip_generator.py
           test -f caption_generator.py
           test -d sticker
           if [ "$CHANNEL" = "VIRAL_MOMENT" ]; then
