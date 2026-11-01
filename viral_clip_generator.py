@@ -468,41 +468,15 @@ def upload_all_clips(service, clip_paths):
     return True
 
 
-def get_result_json(filename, service=None):
+def get_result_json(filename):
     local_path = RESULTS_DIR / filename
 
     if local_path.exists() and local_path.stat().st_size > 0:
         print(f"[JSON] Local JSON found: {filename}")
         return local_path
 
-    if ENV != "PROD":
-        return None
-
-    if not service or not GDRIVE_JSON_FOLDER_ID:
-        raise RuntimeError(
-            "JSON is not local and Drive JSON folder is not configured."
-        )
-
-    drive_filename = f"viral-moment__{filename}"
-
-    drive_file = find_drive_file(
-        service,
-        drive_filename,
-        GDRIVE_JSON_FOLDER_ID
-    )
-
-    if not drive_file:
-        print(f"[DRIVE] JSON not found: {drive_filename}")
-        return None
-
-    print(f"[DRIVE] Downloading JSON: {drive_filename}")
-
-    return download_drive_file(
-        service,
-        drive_file["id"],
-        local_path
-    )
-
+    print(f"[JSON] Local JSON not found: {filename}")
+    return None
 
 # ============================================================
 # SOURCE VIDEO DISCOVERY

@@ -1,5 +1,8 @@
 
-import json, re, traceback, argparse
+import argparse
+import json
+import re
+import traceback
 from pathlib import Path
 
 from faster_whisper import WhisperModel
@@ -10,12 +13,13 @@ from json_repair import repair_json
 # CONFIG
 # ============================================================
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent
 VIDEO_DIR = BASE_DIR / "videos"
 RESULTS_DIR = BASE_DIR / "results" / "viral-revelation"
 MODEL_PATH = BASE_DIR / "models" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
 
-VIDEO_TYPE = "PODCAST"
+CHANNEL_NAME = "Viral Revelation"
+VIDEO_TYPE = "GENERAL"
 
 WHISPER_MODEL = "base"
 DEVICE = "cpu"
@@ -33,26 +37,37 @@ MAX_HIGHLIGHTS_PER_CHUNK = 12
 LLM_THREADS = 4
 LLM_CONTEXT_SIZE = 8192
 
+whisper = None
+llm = None
+
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ============================================================
 # LOAD MODELS
 # ============================================================
 
-print("[MODEL] Loading Whisper...")
-whisper = WhisperModel(
-    WHISPER_MODEL,
-    device=DEVICE,
-    compute_type=COMPUTE_TYPE
-)
+def load_models():
+    global whisper, llm
 
-print("[MODEL] Loading Qwen...")
-llm = Llama(
-    model_path=str(MODEL_PATH),
-    n_ctx=LLM_CONTEXT_SIZE,
-    n_threads=LLM_THREADS,
-    verbose=False
-)
+    if whisper is None:
+        print("[MODEL] Loading Whisper...")
+        whisper = WhisperModel(
+            WHISPER_MODEL,
+            device=DEVICE,
+            compute_type=COMPUTE_TYPE
+        )
+
+    if llm is None:
+        if not MODEL_PATH.is_file():
+            raise FileNotFoundError(f"Qwen model not found: {MODEL_PATH}")
+
+        print("[MODEL] Loading Qwen...")
+        llm = Llama(
+            model_path=str(MODEL_PATH),
+            n_ctx=LLM_CONTEXT_SIZE,
+            n_threads=LLM_THREADS,
+            verbose=False
+        )
 
 # ============================================================
 # HELPERS
@@ -137,7 +152,6 @@ def validate_highlight_words(words, transcript):
     for segment in transcript:
         for word in segment["text"].split():
             normalized = normalize_word(word)
-
             if normalized:
                 valid_words.add(normalized)
 
@@ -159,7 +173,7 @@ def validate_highlight_words(words, transcript):
 
 
 # ============================================================
-# REVELATION / VIRAL MOMENT ANALYSIS
+# VIRAL REVELATION ANALYSIS
 # ============================================================
 
 def analyze_chunk(chunk, video_name):
@@ -170,17 +184,16 @@ def analyze_chunk(chunk, video_name):
 
     prompt = f"""
 You are an elite YouTube Shorts editor, viral content strategist
-and professional podcast/interview clip selector.
+and professional video clip selector.
 
 Your task is to find the MOST INTERESTING, SURPRISING,
 THOUGHT-PROVOKING and SHAREABLE COMPLETE VIDEO SEQUENCES.
 
-CHANNEL: RevelationClips
+CHANNEL: {CHANNEL_NAME}
 VIDEO: {video_name}
 
 CHUNK START: {chunk["start"]}
 CHUNK END: {chunk["end"]}
-CHUNK DURATION: {chunk["end"] - chunk["start"]}
 
 TRANSCRIPT:
 {transcript_text}
@@ -189,7 +202,7 @@ TRANSCRIPT:
 1. CONTENT DISCOVERY
 ==================================================
 
-Find interesting moments from ANY type of content:
+Find interesting moments from ANY type of content.
 
 PODCASTS AND INTERVIEWS:
 - Unexpected confessions.
@@ -202,7 +215,6 @@ PODCASTS AND INTERVIEWS:
 - Strong opinions and debates.
 - Life lessons and powerful insights.
 - Incredible achievements.
-- Unusual experiences.
 
 CHALLENGES AND ENTERTAINMENT:
 - Impossible challenges.
@@ -222,7 +234,7 @@ FACTS AND DISCOVERIES:
 - Historical facts.
 - Hidden details.
 - Interesting explanations.
-- Things people commonly misunderstand.
+- Common misconceptions.
 - Unexpected connections.
 
 HUMAN STORIES:
@@ -234,10 +246,10 @@ HUMAN STORIES:
 - Moments of courage.
 - Incredible survival stories.
 
-Do not restrict yourself to any single category.
+Do not restrict yourself to one category.
 
 ==================================================
-2. WHAT MAKES A GREAT REVELATIONCLIPS MOMENT?
+2. WHAT MAKES A GREAT MOMENT?
 ==================================================
 
 Prioritize moments that make viewers think:
@@ -250,13 +262,12 @@ Prioritize moments that make viewers think:
 - "I can't believe this actually happened."
 
 Look for:
-
 1. A strong opening statement or intriguing question.
 2. An interesting explanation or story.
 3. A surprising detail, revelation or payoff.
 
-A moment should feel like a complete mini-story,
-not just a random sentence taken from a conversation.
+A moment must feel like a complete mini-story,
+not a random sentence taken from a conversation.
 
 ==================================================
 3. CLIP SELECTION RULES
@@ -265,7 +276,6 @@ not just a random sentence taken from a conversation.
 Identify up to {MAX_MOMENTS_PER_CHUNK} strong opportunities.
 
 Every selected clip MUST:
-
 - Be between {MIN_CLIP_DURATION} and {MAX_CLIP_DURATION} seconds.
 - Be understandable without watching the original video.
 - Have a compelling opening.
@@ -280,11 +290,10 @@ Avoid:
 - Long pauses and irrelevant discussion.
 - Incomplete explanations.
 - Contextless sentences.
-- Weak reactions without a meaningful event.
+- Weak reactions without meaningful events.
 - Multiple clips covering the same moment.
 
-Do not create clips simply to fill the quota.
-
+Do not create clips just to fill the quota.
 QUALITY IS MORE IMPORTANT THAN QUANTITY.
 
 ==================================================
@@ -296,7 +305,6 @@ All timestamps MUST be absolute seconds from the ORIGINAL VIDEO.
 Never return chunk-relative timestamps.
 
 For every clip:
-
 - start >= {chunk["start"]}
 - end <= {chunk["end"]}
 - start >= 0
@@ -305,13 +313,10 @@ For every clip:
 - duration <= {MAX_CLIP_DURATION}
 
 Use timestamps from the supplied transcript.
-
-Never guess timestamps.
-Never invent timestamps.
+Never guess or invent timestamps.
 Never extend a clip with unrelated content.
 
-Find the natural beginning of the conversation or story
-and its natural ending.
+Find the natural beginning and ending of the story.
 
 ==================================================
 5. CONTENT QUALITY
@@ -331,13 +336,8 @@ Prefer:
 
 Do not confuse loudness with interesting content.
 
-A calm explanation of something extraordinary can be
-more valuable than a loud but meaningless reaction.
-
 Do not invent facts, dialogue, names, prices or events.
-
-When a speaker expresses an opinion, do not present it
-as an established fact.
+When someone expresses an opinion, do not present it as fact.
 
 ==================================================
 6. TITLE REQUIREMENTS
@@ -352,17 +352,6 @@ Titles should:
 - Prefer 35-65 characters.
 - Use Title Case for important words.
 - Include 1-2 relevant emojis when appropriate.
-
-Examples:
-
-- "He Revealed Something Nobody Expected! 😳"
-- "This Completely Changes Everything! 🤯"
-- "Nobody Was Ready For His Answer! 😭"
-- "The Truth Behind This Is Insane! 😱"
-- "He Explained Something Mind-Blowing! 🤯"
-- "This Is Something Most People Never Notice!"
-- "The Most Unexpected Answer Ever! 😂"
-- "What He Said Left Everyone Speechless! 😳"
 
 Never use misleading clickbait.
 
@@ -394,8 +383,6 @@ shorts_potential: 0-15
 
 Total score MUST equal the sum of all five categories.
 
-Do not assign identical scores to every moment.
-
 ==================================================
 9. HIGHLIGHT WORDS
 ==================================================
@@ -409,8 +396,7 @@ Prefer:
 - Strong reactions.
 - Words that emphasize the revelation.
 
-Every word MUST actually appear in the transcript.
-
+Every word MUST appear in the transcript.
 Do not invent words.
 
 ==================================================
@@ -418,7 +404,6 @@ Do not invent words.
 ==================================================
 
 Every moment MUST contain:
-
 "posted": false
 
 ==================================================
@@ -426,7 +411,6 @@ Every moment MUST contain:
 ==================================================
 
 Verify every moment:
-
 - Numeric start and end.
 - Absolute video timestamps.
 - Inside chunk boundaries.
@@ -477,7 +461,6 @@ If no suitable moments exist:
     "highlight_words": []
 }}
 
-Remember:
 Do not invent content.
 Do not return isolated sentences.
 Find complete, engaging sequences.
@@ -504,7 +487,7 @@ QUALITY IS MORE IMPORTANT THAN QUANTITY.
     )
 
     choice = response["choices"][0]
-    content = choice["message"]["content"]
+    content = choice["message"]["content"] or ""
 
     print(f"\nQWEN FINISH REASON: {choice.get('finish_reason')}")
     print(f"QWEN RAW RESPONSE (first 3000 chars):\n{content[:3000]}")
@@ -521,7 +504,6 @@ QUALITY IS MORE IMPORTANT THAN QUANTITY.
     )
 
     print(f"QWEN GENERATED MOMENTS: {len(moments)}")
-
     return moments, highlights
 
 
@@ -533,60 +515,69 @@ def validate_moments(moments, chunk, video_duration):
     valid = []
     rejected = 0
 
+    score_limits = {
+        "hook": 25,
+        "surprise": 25,
+        "emotion": 20,
+        "clarity": 15,
+        "shorts_potential": 15
+    }
+
     for moment in moments:
         try:
+            if not isinstance(moment, dict):
+                raise ValueError("Moment is not a JSON object.")
+
             start = float(moment["start"])
             end = float(moment["end"])
             duration = end - start
 
-            reason = None
+            if not (chunk["start"] <= start < end <= chunk["end"]):
+                raise ValueError("Outside chunk boundaries.")
 
-            if start < chunk["start"] or end > chunk["end"]:
-                reason = "Outside chunk boundaries"
-            elif start < 0 or end > video_duration:
-                reason = "Outside video boundaries"
-            elif not MIN_CLIP_DURATION <= duration <= MAX_CLIP_DURATION:
-                reason = f"Invalid duration: {duration:.2f}s"
+            if end > video_duration:
+                raise ValueError("Outside video boundaries.")
 
-            if reason:
-                rejected += 1
-                print(
-                    f"[REJECTED] {start:.2f}-{end:.2f} | "
-                    f"{duration:.2f}s | {reason}"
-                )
-                continue
+            if not MIN_CLIP_DURATION <= duration <= MAX_CLIP_DURATION:
+                raise ValueError(f"Invalid duration: {duration:.2f}s")
 
-            breakdown = moment.get("score_breakdown", {})
+            title = str(moment.get("title", "")).strip()
+            reason = str(moment.get("reason", "")).strip()
+            hook = str(moment.get("hook", "")).strip()
+
+            if not title or not reason or not hook:
+                raise ValueError("Missing title, reason or hook.")
+
+            breakdown = moment.get("score_breakdown")
 
             if not isinstance(breakdown, dict):
-                breakdown = {}
-
-            score_limits = {
-                "hook": 25,
-                "surprise": 25,
-                "emotion": 20,
-                "clarity": 15,
-                "shorts_potential": 15
-            }
+                raise ValueError("Invalid score breakdown.")
 
             clean_breakdown = {}
 
             for key, maximum in score_limits.items():
-                value = float(breakdown.get(key, 0))
-                clean_breakdown[key] = max(
-                    0,
-                    min(maximum, round(value))
-                )
+                value = breakdown.get(key)
+
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ValueError(f"Invalid score value: {key}")
+
+                if not 0 <= value <= maximum:
+                    raise ValueError(f"Score out of range: {key}")
+
+                clean_breakdown[key] = round(value)
 
             score = sum(clean_breakdown.values())
+
+            if score < 0 or score > 100:
+                raise ValueError("Invalid total score.")
 
             valid.append({
                 "start": round(start, 2),
                 "end": round(end, 2),
                 "duration": round(duration, 2),
-                "title": str(moment.get("title", "Untitled")),
-                "reason": str(moment.get("reason", "")),
-                "hook": str(moment.get("hook", "")),
+                "title": title,
+                "reason": reason,
+                "hook": hook,
                 "score": score,
                 "score_breakdown": clean_breakdown,
                 "highlight_words": [],
@@ -615,7 +606,6 @@ def attach_moment_highlights(moment, segments, all_highlights):
         ):
             for word in segment["text"].split():
                 normalized = normalize_word(word)
-
                 if normalized:
                     moment_words.add(normalized)
 
@@ -657,6 +647,10 @@ def remove_duplicate_moments(moments):
 
             if shorter and overlap / shorter > 0.65:
                 duplicate = True
+                print(
+                    f"[DUPLICATE] {moment['start']:.2f}-"
+                    f"{moment['end']:.2f} removed."
+                )
                 break
 
         if not duplicate:
@@ -673,11 +667,11 @@ def get_video_duration(video_path):
     from moviepy import VideoFileClip
 
     with VideoFileClip(str(video_path)) as video:
-        return video.duration
+        return float(video.duration)
 
 
 # ============================================================
-# FORMAT FOR EXISTING CLIP GENERATOR
+# FORMAT FOR CLIP GENERATOR
 # ============================================================
 
 def format_moment(moment, index):
@@ -697,10 +691,49 @@ def format_moment(moment, index):
 
 
 # ============================================================
+# SAVE JSON
+# ============================================================
+
+def save_result(video_path, video_duration, moments, highlights):
+    formatted_moments = [
+        format_moment(moment, index)
+        for index, moment in enumerate(moments, start=1)
+    ]
+
+    output = {
+        "video": video_path.name,
+        "channel": "VIRAL_REVELATION",
+        "video_type": VIDEO_TYPE,
+        "video_duration": round(video_duration, 2),
+        "total_moments": len(formatted_moments),
+        "highlight_words": highlights,
+        "moments": formatted_moments
+    }
+
+    output_path = RESULTS_DIR / f"{video_path.stem}.json"
+    temp_path = output_path.with_suffix(".json.tmp")
+
+    with temp_path.open("w", encoding="utf-8") as file:
+        json.dump(output, file, indent=2, ensure_ascii=False)
+
+    temp_path.replace(output_path)
+
+    print("\nAnalysis complete!")
+    print(f"Channel: {CHANNEL_NAME}")
+    print(f"Moments found: {len(formatted_moments)}")
+    print(f"Highlight words: {len(highlights)}")
+    print(f"Saved: {output_path.resolve()}")
+
+    return output_path
+
+
+# ============================================================
 # MAIN
 # ============================================================
 
 def main(file_name):
+    load_models()
+
     video_path = Path(file_name)
 
     if not video_path.is_absolute():
@@ -710,20 +743,21 @@ def main(file_name):
         raise FileNotFoundError(f"Video not found: {video_path}")
 
     print(f"\nAnalyzing: {video_path.name}")
-    print(f"Channel: RevelationClips")
+    print(f"Channel: {CHANNEL_NAME}")
     print(f"Video type: {VIDEO_TYPE}")
 
     video_duration = get_video_duration(video_path)
 
+    print(f"Video duration: {video_duration:.2f}s")
     print("Transcribing video...")
+
     segments = transcribe_video(video_path)
 
     if not segments:
-        print("[WARNING] No speech detected.")
-        return
+        print("[WARNING] No speech detected. Saving empty result.")
+        return save_result(video_path, video_duration, [], [])
 
     chunks = split_chunks(segments, video_duration)
-
     all_moments = []
     all_highlights = []
 
@@ -747,7 +781,6 @@ def main(file_name):
 
                 all_moments.extend(validated)
                 all_highlights.extend(highlights)
-
                 break
 
             except Exception as error:
@@ -768,34 +801,12 @@ def main(file_name):
             all_highlights
         )
 
-    formatted_moments = [
-        format_moment(moment, index)
-        for index, moment in enumerate(all_moments, start=1)
-    ]
-
-    output = {
-        "video": video_path.name,
-        "video_type": VIDEO_TYPE,
-        "video_duration": round(video_duration, 2),
-        "total_moments": len(formatted_moments),
-        "highlight_words": all_highlights,
-        "moments": formatted_moments
-    }
-
-    output_path = RESULTS_DIR / f"{video_path.stem}.json"
-
-    temp_path = output_path.with_suffix(".json.tmp")
-
-    with open(temp_path, "w", encoding="utf-8") as file:
-        json.dump(output, file, indent=2, ensure_ascii=False)
-
-    temp_path.replace(output_path)
-
-    print("\nAnalysis complete!")
-    print(f"Channel: RevelationClips")
-    print(f"Moments found: {len(formatted_moments)}")
-    print(f"Highlight words: {len(all_highlights)}")
-    print(f"Saved: {output_path.resolve()}")
+    return save_result(
+        video_path,
+        video_duration,
+        all_moments,
+        all_highlights
+    )
 
 
 # ============================================================
@@ -810,19 +821,24 @@ def close_models():
             llm.close()
         except Exception:
             pass
-
         llm = None
 
     whisper = None
 
 
+# ============================================================
+# CLI
+# ============================================================
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Find viral revelation moments in a video."
+    )
 
     parser.add_argument(
         "--video",
         required=True,
-        help="Video filename inside videos/"
+        help="Video filename inside videos/ or an absolute video path."
     )
 
     args = parser.parse_args()

@@ -14,7 +14,7 @@ ENV = os.getenv("ENV", "DEV").upper()
 class Channel(Enum):
     VIRAL_MOMENT = "viral-moment"
     DOCUMENTARY_MOMENT = "documentary-moment"
-    REVELATION_MOMENT = "revelation-moment"
+    VIRAL_REVELATION = "viral-revelation"
 
 CHANNEL = Channel[os.getenv("CHANNEL", "VIRAL_MOMENT").upper()]
 
@@ -27,7 +27,7 @@ CHANNEL_CONFIG = {
         "finder": BASE_DIR / "viral_documentary" / "documentary_video_finder.py",
         "queue": BASE_DIR / "viral_documentary_queue.csv"
     },
-    Channel.REVELATION_MOMENT: {
+    Channel.VIRAL_REVELATION: {
         "finder": BASE_DIR / "viral_revelation" / "viral_revelation_finder.py",
         "queue": BASE_DIR / "viral_revelation_queue.csv"
     }

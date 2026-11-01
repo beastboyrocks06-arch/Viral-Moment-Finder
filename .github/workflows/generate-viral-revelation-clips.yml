@@ -6,11 +6,11 @@ on:
       - "Viral Revelation JSON Generator"
     types:
       - completed
+
   workflow_dispatch:
 
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: viral-revelation-clip-generator
@@ -25,9 +25,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
+    env:
+      ENV: PROD
+      CHANNEL: VIRAL_REVELATION
+      HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
+
+      GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+      GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
+
+      GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
+      GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+      GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
+
     steps:
+      # --------------------------------------------------
+      # CHECKOUT
+      # --------------------------------------------------
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --------------------------------------------------
+      # PYTHON SETUP
+      # --------------------------------------------------
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -36,41 +58,85 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
+      # --------------------------------------------------
+      # INSTALL FFMPEG
+      # --------------------------------------------------
+
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+
+      # --------------------------------------------------
+      # INSTALL DEPENDENCIES
+      # --------------------------------------------------
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install google-api-python-client google-auth google-auth-httplib2 python-dotenv
+          pip install "moviepy>=2.0,<3.0"
+
+      # --------------------------------------------------
+      # VERIFY REQUIRED FILES
+      # --------------------------------------------------
 
       - name: Verify required files
         run: |
+          set -e
+
           test -f clip_generator.py
           test -f caption_generator.py
           test -d sticker
-          test -f viral_moment_queue.csv
+          test -f requirements.txt
+
+          echo "Required files verified."
+
+      # --------------------------------------------------
+      # VERIFY GOOGLE DRIVE CONFIGURATION
+      # --------------------------------------------------
+
+      - name: Verify Google Drive configuration
+        run: |
+          set -e
+
+          if [ -z "$GDRIVE_TOKEN_JSON" ]; then
+            echo "::error::GDRIVE_TOKEN_JSON secret is missing."
+            exit 1
+          fi
+
+          if [ -z "$GDRIVE_CLIPS_FOLDER_ID" ]; then
+            echo "::error::GDRIVE_CLIPS_FOLDER_ID secret is missing."
+            exit 1
+          fi
+
+          echo "Google Drive configuration found."
+
+      # --------------------------------------------------
+      # GENERATE REVELATION CLIPS
+      # --------------------------------------------------
 
       - name: Generate Revelation clips
-        env:
-          ENV: PROD
-          CHANNEL: REVELATION_MOMENT
-          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
-          GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
-          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
         run: |
           echo "Environment: $ENV"
           echo "Channel: $CHANNEL"
+
           python clip_generator.py
 
-      - name: Upload generated clips
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: REVELATION_MOMENT-generated-clips
-          path: clips/revelation-moment/*.mp4
-          if-no-files-found: warn
-          retention-days: 7
+      # --------------------------------------------------
+      # VERIFY GENERATED CLIPS
+      # --------------------------------------------------
+
+      - name: Verify generated clips
+        run: |
+          set -e
+
+          if [ -d "clips/viral-revelation" ]; then
+            COUNT=$(find clips/viral-revelation -maxdepth 1 -type f -name "*.mp4" | wc -l)
+            echo "Local generated clips: $COUNT"
+          else
+            echo "Local clips directory not found."
+          fi
+
+          echo "Clip generation workflow completed."
