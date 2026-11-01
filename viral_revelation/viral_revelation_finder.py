@@ -13,7 +13,7 @@ from json_repair import repair_json
 # CONFIG
 # ============================================================
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 VIDEO_DIR = BASE_DIR / "videos"
 RESULTS_DIR = BASE_DIR / "results" / "viral-revelation"
 MODEL_PATH = BASE_DIR / "models" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
