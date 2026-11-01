@@ -244,85 +244,21 @@ def find_drive_json(service, filename):
     )
 
 
-def get_json_file(channel, video_title, drive):
-    config = CHANNEL_CONFIG[channel]
-
+def get_json_file(channel, video_title, drive=None):
     filename = f"{Path(video_title).stem}.json"
-    local_path = config["results"] / filename
+    json_path = channel.results_dir / filename
 
-    if local_path.exists():
-        return local_path
+    if not json_path.exists():
+        raise FileNotFoundError(f"Local JSON not found: {json_path}")
 
-    if ENV != "PROD" or drive is None:
-        raise FileNotFoundError(
-            f"JSON result not found: {local_path}"
-        )
+    return json_path
 
-    drive_filename = f"{channel.value}__{filename}"
+def save_json(json_path, data, drive=None):
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
-    drive_file = find_drive_json(
-        drive,
-        drive_filename
-    )
-
-    if not drive_file:
-        raise FileNotFoundError(
-            f"Drive JSON not found: {drive_filename}"
-        )
-
-    print(f"[DRIVE] Downloading JSON: {drive_filename}")
-
-    return download_drive_file(
-        drive,
-        drive_file["id"],
-        local_path,
-        "JSON"
-    )
-
-
-def save_json(channel, json_file, data, drive):
-    temp_file = json_file.with_suffix(".tmp")
-
-    temp_file.write_text(
-        json.dumps(
-            data,
-            indent=2,
-            ensure_ascii=False
-        ),
-        encoding="utf-8"
-    )
-
-    os.replace(temp_file, json_file)
-
-    if ENV != "PROD":
-        return
-
-    drive_filename = f"{channel.value}__{json_file.name}"
-
-    drive_file = find_drive_json(
-        drive,
-        drive_filename
-    )
-
-    if not drive_file:
-        raise FileNotFoundError(
-            f"Cannot update missing Drive JSON: {drive_filename}"
-        )
-
-    media = MediaFileUpload(
-        str(json_file),
-        mimetype="application/json",
-        resumable=True
-    )
-
-    drive.files().update(
-        fileId=drive_file["id"],
-        media_body=media
-    ).execute()
-
-    print(f"[DRIVE] Updated JSON: {drive_filename}")
-
-
+    print(f"[JSON] Updated locally: {json_path}")
+    
 # ============================================================
 # QUEUE OPERATIONS
 # ============================================================
