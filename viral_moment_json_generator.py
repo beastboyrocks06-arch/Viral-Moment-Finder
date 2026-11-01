@@ -210,17 +210,6 @@ def process_queue():
             row["json_done"] = "true"
             save_queue(rows)
 
-            # Google Drive is optional backup/synchronization.
-            if ENV == "PROD":
-                try:
-                    folder_id = os.getenv("GDRIVE_JSON_FOLDER_ID")
-                    if not folder_id:
-                        raise ValueError("GDRIVE_JSON_FOLDER_ID is missing")
-                    upload_drive_file(service, json_path, folder_id, drive_name)
-                    print(f"[DRIVE] JSON synced: {drive_name}")
-                except Exception as error:
-                    print(f"[DRIVE WARNING] Local JSON is safe, but Drive sync failed: {error}")
-
             print(f"SUCCESS: {video_title}")    
 
         except subprocess.CalledProcessError as error:

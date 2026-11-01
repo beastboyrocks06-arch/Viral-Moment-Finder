@@ -3,6 +3,7 @@ name: Viral Moment JSON Generator
 on:
   schedule:
     - cron: "30 11 * * *" # Daily, 5 PM IST
+
   workflow_dispatch:
     inputs:
       channel:
@@ -31,8 +32,18 @@ jobs:
       CHANNEL: ${{ github.event.inputs.channel || 'VIRAL_MOMENT' }}
 
     steps:
+      # --------------------------------------------------
+      # CHECKOUT
+      # --------------------------------------------------
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --------------------------------------------------
+      # RESTORE QWEN MODEL CACHE
+      # --------------------------------------------------
 
       - name: Restore Qwen Model Cache
         id: qwen-cache
@@ -61,6 +72,10 @@ jobs:
           ls -lh "$MODEL"
           echo "Qwen model cache restored successfully."
 
+      # --------------------------------------------------
+      # PYTHON SETUP
+      # --------------------------------------------------
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -83,16 +98,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install "moviepy>=2.0,<3.0"
+          pip install "moviepy>=2.0,<3.0"
 
-      
+      # --------------------------------------------------
+      # GOOGLE DRIVE CONNECTION TEST
+      # Source videos only
+      # --------------------------------------------------
+
       - name: Test Google Drive Connection
         env:
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
-          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
         run: |
           python - <<'PY'
           import os
@@ -101,67 +117,77 @@ jobs:
           from googleapiclient.discovery import build
 
           raw = os.environ.get("GDRIVE_CREDENTIALS", "").strip()
+
           if not raw:
-              raise RuntimeError("GDRIVE_CREDENTIALS secret is missing or empty.")
+              raise RuntimeError("GDRIVE_CREDENTIALS secret is missing.")
 
           try:
-              service_account_info = json.loads(raw)
+              info = json.loads(raw)
           except json.JSONDecodeError as exc:
               raise RuntimeError("GDRIVE_CREDENTIALS is not valid JSON.") from exc
 
-          if service_account_info.get("type") != "service_account":
-              raise RuntimeError("Invalid Google service-account credentials.")
+          if info.get("type") != "service_account":
+              raise RuntimeError("Invalid service-account credentials.")
 
           credentials = Credentials.from_service_account_info(
-              service_account_info,
+              info,
               scopes=["https://www.googleapis.com/auth/drive"]
           )
 
           drive = build("drive", "v3", credentials=credentials)
 
-          for folder in ["GDRIVE_SOURCE_FOLDER_ID", "GDRIVE_JSON_FOLDER_ID"]:
-              folder_id = os.environ.get(folder, "").strip()
-              if not folder_id:
-                  raise RuntimeError(f"{folder} secret is missing or empty.")
+          folder_id = os.environ.get("GDRIVE_SOURCE_FOLDER_ID", "").strip()
 
-              result = drive.files().get(
-                  fileId=folder_id,
-                  fields="id,name,mimeType",
-                  supportsAllDrives=True
-              ).execute()
+          if not folder_id:
+              raise RuntimeError("GDRIVE_SOURCE_FOLDER_ID is missing.")
 
-              if result["mimeType"] != "application/vnd.google-apps.folder":
-                  raise RuntimeError(f"{folder} is not a Google Drive folder.")
+          folder = drive.files().get(
+              fileId=folder_id,
+              fields="id,name,mimeType",
+              supportsAllDrives=True
+          ).execute()
 
-              print(f"{folder}: {result['name']} - OK")
+          if folder["mimeType"] != "application/vnd.google-apps.folder":
+              raise RuntimeError("Source folder ID is not a folder.")
 
+          print(f"Source folder: {folder['name']} - OK")
           print("Google Drive connection successful!")
           PY
 
+      # --------------------------------------------------
+      # GENERATE JSON
+      # --------------------------------------------------
 
       - name: Generate pending JSON files
         env:
           ENV: PROD
-          CHANNEL: VIRAL_MOMENT
+          CHANNEL: ${{ github.event.inputs.channel || 'VIRAL_MOMENT' }}
           HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
-          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
         run: |
           echo "Environment: $ENV"
           echo "Channel: $CHANNEL"
+
           python viral_moment_json_generator.py
+
+      # --------------------------------------------------
+      # COMMIT AND PUSH RESULTS
+      # --------------------------------------------------
 
       - name: Commit generated JSON and queue updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add viral_moment_queue.csv results/
+          git add -A -- '*queue*.csv' results/
 
           if ! git diff --cached --quiet; then
             git commit -m "chore: generate $CHANNEL JSON"
-            git push
+
+            git pull --rebase origin main
+
+            git push origin HEAD:main
           else
             echo "No changes to commit."
           fi
