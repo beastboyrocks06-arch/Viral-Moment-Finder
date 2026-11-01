@@ -297,8 +297,9 @@ def save_queue(queue_path, fieldnames, rows):
     with open(queue_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=fieldnames,
-            extrasaction="ignore"
+            fieldnames=["video_title", "json_done", "post_done", "clip_done"],
+            extrasaction="ignore",
+            quoting=csv.QUOTE_MINIMAL
         )
         writer.writeheader()
         writer.writerows(rows)
