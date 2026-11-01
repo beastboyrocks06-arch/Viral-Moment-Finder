@@ -246,8 +246,7 @@ def find_drive_json(service, filename):
 
 def get_json_file(channel, video_title, drive=None):
     filename = f"{Path(video_title).stem}.json"
-    json_path = channel.results_dir / filename
-
+    json_path = channel.results / filename
     if not json_path.exists():
         raise FileNotFoundError(f"Local JSON not found: {json_path}")
 
@@ -305,7 +304,7 @@ def save_queue(queue_path, fieldnames, rows):
         writer.writerows(rows)
 
     print(f"[QUEUE] Saved: {queue_path}")
-    
+
 def is_true(value):
     return str(value or "").strip().lower() in {
         "true", "1", "yes"
