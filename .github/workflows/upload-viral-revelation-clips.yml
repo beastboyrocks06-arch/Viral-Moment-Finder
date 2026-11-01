@@ -2,11 +2,9 @@
 name: Viral Revelation YouTube Uploader
 
 on:
-  workflow_run:
-    workflows:
-      - "Viral Revelation Clip Generator"
-    types:
-      - completed
+  schedule:
+    - cron: "30 2 * * *"  # 8:00 AM IST
+    - cron: "30 14 * * *" # 8:00 PM IST
   workflow_dispatch:
 
 permissions:
@@ -18,7 +16,6 @@ concurrency:
 
 jobs:
   upload:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
