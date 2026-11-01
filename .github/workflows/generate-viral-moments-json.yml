@@ -109,6 +109,9 @@ jobs:
           HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
+          GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+          GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
         run: |
           python - <<'PY'
           import os
@@ -164,7 +167,10 @@ jobs:
           CHANNEL: ${{ github.event.inputs.channel || 'VIRAL_MOMENT' }}
           HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+          GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
         run: |
           echo "Environment: $ENV"
           echo "Channel: $CHANNEL"

@@ -10,3 +10,5 @@ clips/
 downloads/
 gdrive-credentials.json
 .env
+gdrive_token.json
+oauth-clinet.json   

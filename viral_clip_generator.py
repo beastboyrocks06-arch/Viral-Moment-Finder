@@ -15,11 +15,13 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from dotenv import load_dotenv
-from google.oauth2.service_account import Credentials
+
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 from googleapiclient.errors import HttpError
 from httplib2 import HttpLib2Error
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
 from moviepy import (
     VideoFileClip,
@@ -131,21 +133,44 @@ def initialize():
 # ============================================================
 
 def get_drive():
-    credentials_json = os.getenv("GDRIVE_CREDENTIALS", "").strip()
-    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    token_json = os.getenv("GDRIVE_TOKEN_JSON")
+    token_path = BASE_DIR / "gdrive_token.json"
 
-    if credentials_json:
-        credentials = Credentials.from_service_account_info(
-            json.loads(credentials_json),
+    if token_json:
+        credentials = Credentials.from_authorized_user_info(
+            json.loads(token_json),
             scopes=SCOPES
         )
-    elif credentials_path:
-        credentials = Credentials.from_service_account_file(
-            credentials_path,
-            scopes=SCOPES
-        )
+        print("[DRIVE] Using OAuth token from environment.")
     else:
-        raise RuntimeError("Google Drive credentials are not configured.")
+        if not token_path.exists():
+            raise FileNotFoundError(
+                f"Google Drive OAuth token not found: {token_path}"
+            )
+
+        credentials = Credentials.from_authorized_user_file(
+            str(token_path),
+            scopes=SCOPES
+        )
+        print("[DRIVE] Using local OAuth token.")
+
+    if not credentials.valid:
+        if credentials.expired and credentials.refresh_token:
+            credentials.refresh(Request())
+
+            # Save refreshed credentials only for local execution.
+            if not token_json:
+                token_path.write_text(
+                    credentials.to_json(),
+                    encoding="utf-8"
+                )
+
+            print("[DRIVE] OAuth token refreshed.")
+        else:
+            raise RuntimeError(
+                "Google Drive OAuth token is invalid or expired. "
+                "Generate a new token."
+            )
 
     service = build(
         "drive",
@@ -154,7 +179,7 @@ def get_drive():
         cache_discovery=False
     )
 
-    print("[DRIVE] Google Drive connection initialized.")
+    print("[DRIVE] OAuth authentication successful.")
     return service
 
 
