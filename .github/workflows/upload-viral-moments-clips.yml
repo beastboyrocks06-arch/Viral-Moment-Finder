@@ -118,10 +118,10 @@ jobs:
         env:
           ENV: PROD
           CHANNEL: VIRAL_MOMENT
-
+          MAX_UPLOADS_PER_RUN: "1"
           GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
           GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
-
+          YOUTUBE_CHANNEL_VIRAL_REVELATION: ${{ vars.YOUTUBE_CHANNEL_VIRAL_REVELATION }}
           YOUTUBE_PRIVACY_STATUS: public
         run: |
           python viral_moment_clip_uploader.py

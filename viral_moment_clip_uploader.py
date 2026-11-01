@@ -21,32 +21,43 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 BASE_DIR = Path(__file__).resolve().parent
 TOKEN_FILE = BASE_DIR / "token.json"
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.readonly"
+]
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 ENV = os.getenv("ENV", "DEV").upper()
 PRIVACY_STATUS = os.getenv("YOUTUBE_PRIVACY_STATUS", "public")
 CATEGORY_ID = os.getenv("YOUTUBE_CATEGORY_ID", "24")
 
-MAX_UPLOADS_PER_RUN = 1
+MAX_UPLOADS_PER_RUN = int(os.getenv("MAX_UPLOADS_PER_RUN", "1"))
 GDRIVE_CLIPS_FOLDER_ID = os.getenv("GDRIVE_CLIPS_FOLDER_ID")
 
 
 class Channel(Enum):
     VIRAL_MOMENT = "viral-moment"
     DOCUMENTARY_MOMENT = "documentary-moment"
-
+    VIRAL_REVELATION = "viral-revelation"
 
 CHANNEL_CONFIG = {
     Channel.VIRAL_MOMENT: {
         "queue": BASE_DIR / "viral_moment_queue.csv",
         "results": BASE_DIR / "results" / "viral-moment",
         "clips": BASE_DIR / "clips" / "viral-moment",
+        "youtube_channel_id": os.getenv("YOUTUBE_CHANNEL_VIRAL_MOMENT")
     },
     Channel.DOCUMENTARY_MOMENT: {
         "queue": BASE_DIR / "viral_documentary_queue.csv",
         "results": BASE_DIR / "results" / "documentary-moment",
         "clips": BASE_DIR / "clips" / "documentary-moment",
+        "youtube_channel_id": os.getenv("YOUTUBE_CHANNEL_DOCUMENTARY_MOMENT")
+    },
+    Channel.VIRAL_REVELATION: {
+        "queue": BASE_DIR / "viral_revelation_queue.csv",
+        "results": BASE_DIR / "results" / "viral-revelation",
+        "clips": BASE_DIR / "clips" / "viral-revelation",
+        "youtube_channel_id": os.getenv("YOUTUBE_CHANNEL_VIRAL_REVELATION")
     },
 }
 
@@ -84,6 +95,41 @@ def load_youtube():
     print("[YOUTUBE] OAuth authentication successful.")
     return service
 
+def verify_youtube_channel(youtube, expected_channel_id):
+    if not expected_channel_id:
+        raise RuntimeError(
+            "YouTube Channel ID is missing. "
+            "Configure the appropriate YOUTUBE_CHANNEL_* environment variable."
+        )
+
+    response = youtube.channels().list(
+        part="id,snippet",
+        mine=True
+    ).execute()
+
+    channels = response.get("items", [])
+
+    if not channels:
+        raise RuntimeError("No YouTube channel found for the authenticated account.")
+
+    for channel in channels:
+        channel_id = channel["id"]
+        channel_title = channel["snippet"]["title"]
+
+        print(f"[YOUTUBE] Authenticated channel: {channel_title} ({channel_id})")
+
+        if channel_id == expected_channel_id:
+            print("[YOUTUBE] Channel ID verification successful.")
+            return
+
+    available_ids = [channel["id"] for channel in channels]
+
+    raise RuntimeError(
+        f"YouTube channel mismatch!\n"
+        f"Expected: {expected_channel_id}\n"
+        f"Authenticated channel IDs: {available_ids}\n"
+        "Upload cancelled."
+    )
 
 def load_drive():
     if ENV != "PROD":
@@ -525,6 +571,12 @@ def main(channel_name=None):
 
     if not args.dry_run:
         youtube = load_youtube()
+
+        verify_youtube_channel(
+            youtube,
+            config["youtube_channel_id"]
+        )
+
         drive = load_drive()
     elif ENV == "PROD":
         drive = load_drive()
