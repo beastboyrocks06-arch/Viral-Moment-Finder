@@ -32,32 +32,33 @@ PRIVACY_STATUS = os.getenv("YOUTUBE_PRIVACY_STATUS", "public")
 CATEGORY_ID = os.getenv("YOUTUBE_CATEGORY_ID", "24")
 
 MAX_UPLOADS_PER_RUN = int(os.getenv("MAX_UPLOADS_PER_RUN", "1"))
-GDRIVE_CLIPS_FOLDER_ID = os.getenv("GDRIVE_CLIPS_FOLDER_ID")
 
 
 class Channel(Enum):
     VIRAL_MOMENT = "viral-moment"
     DOCUMENTARY_MOMENT = "documentary-moment"
     VIRAL_REVELATION = "viral-revelation"
-
 CHANNEL_CONFIG = {
     Channel.VIRAL_MOMENT: {
         "queue": BASE_DIR / "viral_moment_queue.csv",
         "results": BASE_DIR / "results" / "viral-moment",
         "clips": BASE_DIR / "clips" / "viral-moment",
-        "youtube_channel_id": "UChapHrYvYD-FqrKUALrDZbw"
+        "youtube_channel_id": "UChapHrYvYD-FqrKUALrDZbw",
+                "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX"
     },
     Channel.DOCUMENTARY_MOMENT: {
         "queue": BASE_DIR / "viral_documentary_queue.csv",
         "results": BASE_DIR / "results" / "documentary-moment",
         "clips": BASE_DIR / "clips" / "documentary-moment",
-        "youtube_channel_id": "abc"
+        "youtube_channel_id": "abc",
+                "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX"
     },
     Channel.VIRAL_REVELATION: {
         "queue": BASE_DIR / "viral_revelation_queue.csv",
         "results": BASE_DIR / "results" / "viral-revelation",
         "clips": BASE_DIR / "clips" / "viral-revelation",
-        "youtube_channel_id": "UCVT52FrZXKx1Zl7nFSkELwA"
+        "youtube_channel_id": "UCVT52FrZXKx1Zl7nFSkELwA",
+        "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX"
     },
 }
 
@@ -139,9 +140,6 @@ def load_drive():
 
     if not token_json:
         raise RuntimeError("GDRIVE_TOKEN_JSON environment variable is missing.")
-
-    if not GDRIVE_CLIPS_FOLDER_ID:
-        raise RuntimeError("GDRIVE_CLIPS_FOLDER_ID environment variable is missing.")
 
     credentials = Credentials.from_authorized_user_info(
         json.loads(token_json),
@@ -357,7 +355,7 @@ def get_clip_path(channel, video_title, index, drive):
 
     drive_file = find_drive_file(
         drive,
-        GDRIVE_CLIPS_FOLDER_ID,
+        CHANNEL_CONFIG[channel]["gdrive_clips_folder_id"],
         filename
     )
 
