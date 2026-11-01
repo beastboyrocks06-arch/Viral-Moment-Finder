@@ -1,12 +1,9 @@
-
 name: Viral Moment Clip Generator
 
 on:
-  workflow_run:
-    workflows:
-      - "Viral Moment JSON Generator"
-    types:
-      - completed
+  schedule:
+    - cron: "30 17 * * *"  # Daily at 11:00 PM IST
+
   workflow_dispatch:
 
 permissions:
