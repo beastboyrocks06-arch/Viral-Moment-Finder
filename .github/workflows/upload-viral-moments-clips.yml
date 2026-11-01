@@ -122,7 +122,7 @@ jobs:
           GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
           GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
 
-          YOUTUBE_PRIVACY_STATUS: private
+          YOUTUBE_PRIVACY_STATUS: public
         run: |
           python viral_moment_clip_uploader.py
 
