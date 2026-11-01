@@ -39,7 +39,7 @@ jobs:
           cache-dependency-path: viral-clip-uploader-requirements.txt
 
       # --------------------------------------------------
-      # PYTHON DEPENDENCIES
+      # INSTALL DEPENDENCIES
       # --------------------------------------------------
       - name: Install dependencies
         run: |
@@ -51,6 +51,8 @@ jobs:
       # --------------------------------------------------
       - name: Verify uploader files
         run: |
+          set -e
+
           test -f viral_moment_clip_uploader.py
           test -f viral_moment_queue.csv
           test -f viral-clip-uploader-requirements.txt
@@ -59,7 +61,11 @@ jobs:
           mkdir -p results/viral-moment
 
           echo "Uploader files verified."
-          echo "Queue:"
+
+          echo "Queue columns:"
+          head -n 1 viral_moment_queue.csv
+
+          echo "Queue preview:"
           head -n 5 viral_moment_queue.csv
 
       # --------------------------------------------------
@@ -69,6 +75,8 @@ jobs:
         env:
           YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
         run: |
+          set -e
+
           if [ -z "$YOUTUBE_TOKEN_B64" ]; then
             echo "YouTube token secret is missing."
             exit 1
@@ -82,20 +90,17 @@ jobs:
 
       # --------------------------------------------------
       # GOOGLE DRIVE OAUTH VALIDATION
+      # Drive is used ONLY for MP4 downloads.
       # --------------------------------------------------
       - name: Verify Google Drive OAuth configuration
         env:
           GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
-          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
           GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
         run: |
+          set -e
+
           if [ -z "$GDRIVE_TOKEN_JSON" ]; then
             echo "Google Drive OAuth token is missing."
-            exit 1
-          fi
-
-          if [ -z "$GDRIVE_JSON_FOLDER_ID" ]; then
-            echo "Google Drive JSON folder ID is missing."
             exit 1
           fi
 
@@ -115,7 +120,6 @@ jobs:
           CHANNEL: VIRAL_MOMENT
 
           GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
-          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
           GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
 
           YOUTUBE_PRIVACY_STATUS: private
@@ -123,7 +127,7 @@ jobs:
           python viral_moment_clip_uploader.py
 
       # --------------------------------------------------
-      # SAVE QUEUE PROGRESS
+      # SAVE QUEUE AND LOCAL JSON PROGRESS
       # --------------------------------------------------
       - name: Save upload progress
         if: always()
@@ -132,9 +136,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add viral_moment_queue.csv
+          git add results/viral-moment/
 
           if git diff --cached --quiet; then
-            echo "No queue progress changes to save."
+            echo "No upload progress changes to save."
           else
             git commit -m "Update YouTube upload progress"
             git push
@@ -147,5 +152,4 @@ jobs:
         if: always()
         run: |
           rm -f token.json
-
           echo "OAuth cleanup completed."

@@ -243,10 +243,10 @@ def find_drive_json(service, filename):
         filename
     )
 
-
 def get_json_file(channel, video_title, drive=None):
     filename = f"{Path(video_title).stem}.json"
-    json_path = channel.results / filename
+    json_path = CHANNEL_CONFIG[channel]["results"] / filename
+
     if not json_path.exists():
         raise FileNotFoundError(f"Local JSON not found: {json_path}")
 
