@@ -140,6 +140,7 @@ jobs:
         env:
           ENV: PROD
           CHANNEL: VIRAL_MOMENT
+          HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
           GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
