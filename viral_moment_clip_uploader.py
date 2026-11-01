@@ -258,7 +258,7 @@ def save_json(json_path, data, drive=None):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
     print(f"[JSON] Updated locally: {json_path}")
-    
+
 # ============================================================
 # QUEUE OPERATIONS
 # ============================================================
@@ -294,30 +294,18 @@ def load_queue(queue_file):
         # Extra columns such as clip_done are allowed and preserved.
         return reader.fieldnames, list(reader)
 
-
-def save_queue(queue_file, fieldnames, rows):
-    temp_file = queue_file.with_suffix(".tmp")
-
-    with temp_file.open(
-        "w",
-        encoding="utf-8-sig",
-        newline=""
-    ) as file:
-
+def save_queue(queue_path, fieldnames, rows):
+    with open(queue_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
-            file,
+            f,
             fieldnames=fieldnames,
             extrasaction="ignore"
         )
-
         writer.writeheader()
         writer.writerows(rows)
 
-    os.replace(temp_file, queue_file)
-
-    print(f"[QUEUE] Saved: {queue_file.name}")
-
-
+    print(f"[QUEUE] Saved: {queue_path}")
+    
 def is_true(value):
     return str(value or "").strip().lower() in {
         "true", "1", "yes"
