@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
-import io
 
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent
@@ -17,7 +16,6 @@ class Channel(Enum):
     REVELATION_MOMENT = "revelation-moment"
 
 CHANNEL = Channel[os.getenv("CHANNEL", "VIRAL_MOMENT").upper()]
-
 CHANNEL_CONFIG = {
     Channel.VIRAL_MOMENT: {
         "finder": BASE_DIR / "viral_moments" / "viral_moment_finder.py",
@@ -45,30 +43,21 @@ MAX_VIDEOS_PER_RUN = 2
 def get_drive():
     credentials_json = os.getenv("GDRIVE_CREDENTIALS", "").strip()
     credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
-
     if credentials_json:
         print("[DRIVE] Using service account credentials from environment.")
-        credentials = Credentials.from_service_account_info(
-            json.loads(credentials_json),
-            scopes=SCOPES
-        )
+        credentials = Credentials.from_service_account_info(json.loads(credentials_json), scopes=SCOPES)
     elif credentials_path:
         print(f"[DRIVE] Using service account file: {credentials_path}")
-        credentials = Credentials.from_service_account_file(
-            credentials_path,
-            scopes=SCOPES
-        )
+        credentials = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
     else:
-        raise RuntimeError(
-            "Google Drive credentials missing. Configure GDRIVE_CREDENTIALS "
-            "or GOOGLE_APPLICATION_CREDENTIALS."
-        )
-
+        raise RuntimeError("Google Drive credentials missing. Configure GDRIVE_CREDENTIALS or GOOGLE_APPLICATION_CREDENTIALS.")
     return build("drive", "v3", credentials=credentials, cache_discovery=False)
+
 
 def read_queue():
     with open(CSV_FILE, "r", encoding="utf-8-sig", newline="") as file:
         return list(csv.DictReader(file))
+
 
 def save_queue(rows):
     fd, temp_path = tempfile.mkstemp(dir=BASE_DIR, suffix=".csv")
@@ -82,6 +71,7 @@ def save_queue(rows):
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+
 def valid_json(path):
     try:
         with open(path, "r", encoding="utf-8") as file:
@@ -90,70 +80,61 @@ def valid_json(path):
     except (json.JSONDecodeError, OSError, TypeError):
         return False
 
-def find_drive_file(service, folder_id, filename):
-    print(f"[DRIVE] Searching for: {filename}", flush=True)
 
+def find_drive_file(service, folder_id, filename):
+    print(f"[DRIVE] Searching for source video: {filename}", flush=True)
     result = service.files().list(
         q=f"'{folder_id}' in parents and name='{filename}' and trashed=false",
-        fields="files(id,name,size)",
-        pageSize=10,
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True
+        fields="files(id,name,size)", pageSize=10,
+        supportsAllDrives=True, includeItemsFromAllDrives=True
     ).execute()
-
     files = result.get("files", [])
     print(f"[DRIVE] Search completed. Matches: {len(files)}", flush=True)
     return files
 
+
 def download_drive_file(service, file_id, destination):
     destination.parent.mkdir(parents=True, exist_ok=True)
     print(f"[DRIVE] Starting download: {destination.name}", flush=True)
-
-    request = service.files().get_media(
-        fileId=file_id,
-        supportsAllDrives=True
-    )
-
+    request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
     with open(destination, "wb") as file:
         downloader = MediaIoBaseDownload(file, request)
         done = False
         while not done:
             status, done = downloader.next_chunk()
             if status:
-                print(
-                    f"[DRIVE] Download progress: {int(status.progress() * 100)}%",
-                    flush=True
-                )
-
+                print(f"[DRIVE] Download progress: {int(status.progress() * 100)}%", flush=True)
     print(f"[DRIVE] Download complete: {destination}", flush=True)
 
-def upload_drive_file(service, path, folder_id, filename):
-    matches = find_drive_file(service, folder_id, filename)
-    media = MediaFileUpload(str(path), mimetype="application/json", resumable=True)
 
+def upload_drive_file(service, path, folder_id, filename):
+    # Drive JSON is backup-only: never download it as an input to local generation.
+    result = service.files().list(
+        q=f"'{folder_id}' in parents and name='{filename}' and trashed=false",
+        fields="files(id,name)", pageSize=10,
+        supportsAllDrives=True, includeItemsFromAllDrives=True
+    ).execute()
+    matches = result.get("files", [])
+    media = MediaFileUpload(str(path), mimetype="application/json", resumable=True)
     if matches:
-        result = service.files().update(
-            fileId=matches[0]["id"],
-            media_body=media,
-            supportsAllDrives=True,
-            fields="id,name"
+        uploaded = service.files().update(
+            fileId=matches[0]["id"], media_body=media,
+            supportsAllDrives=True, fields="id,name"
         ).execute()
     else:
-        result = service.files().create(
+        uploaded = service.files().create(
             body={"name": filename, "parents": [folder_id]},
-            media_body=media,
-            supportsAllDrives=True,
-            fields="id,name"
+            media_body=media, supportsAllDrives=True, fields="id,name"
         ).execute()
+    print(f"[DRIVE] Uploaded: {uploaded['name']}", flush=True)
+    return uploaded
 
-    print(f"[DRIVE] Uploaded: {result['name']}")
-    return result
 
 def get_video(video_title, service=None):
     local_path = VIDEO_DIR / video_title
     if ENV == "DEV":
         return local_path if local_path.is_file() else None
-    folder_id = os.getenv("GDRIVE_SOURCE_FOLDER_ID")
+    folder_id = os.getenv("GDRIVE_SOURCE_FOLDER_ID", "").strip()
     if not folder_id:
         raise ValueError("GDRIVE_SOURCE_FOLDER_ID is missing")
     matches = find_drive_file(service, folder_id, video_title)
@@ -162,6 +143,7 @@ def get_video(video_title, service=None):
     VIDEO_DIR.mkdir(parents=True, exist_ok=True)
     download_drive_file(service, matches[0]["id"], local_path)
     return local_path
+
 
 def process_queue():
     if ENV not in ("DEV", "PROD"):
@@ -182,57 +164,42 @@ def process_queue():
         video_title = row.get("video_title", "").strip()
         if not video_title:
             continue
-
         print(f"\n[QUEUE] Starting video: {video_title}", flush=True)
-        video_path = get_video(video_title, service)  
+        video_path = get_video(video_title, service)
         json_path = CHANNEL_RESULTS / f"{Path(video_title).stem}.json"
         drive_name = f"{CHANNEL.value}__{json_path.name}"
-
         print(f"\n{'=' * 50}\nProcessing: {video_title}\n{'=' * 50}")
-
         if not video_path:
             print(f"SKIPPED: Video not found: {video_title}")
             continue
 
         try:
-            if ENV == "PROD":
-                folder_id = os.getenv("GDRIVE_JSON_FOLDER_ID")
-                if not folder_id:
-                    raise ValueError("GDRIVE_JSON_FOLDER_ID is missing")
-                existing = find_drive_file(service, folder_id, drive_name)
-                if existing:
-                    download_drive_file(service, existing[0]["id"], json_path)
-
+            # Local JSON is authoritative. No pre-generation Drive JSON lookup/download.
             if valid_json(json_path):
                 print(f"[JSON] Valid local JSON already exists: {json_path.name}")
             else:
                 subprocess.run(
                     [sys.executable, str(FINDER_SCRIPT), "--video", video_title],
-                    cwd=BASE_DIR,
-                    check=True
+                    cwd=BASE_DIR, check=True
                 )
                 if not valid_json(json_path):
                     raise RuntimeError(f"JSON missing or invalid: {json_path}")
 
-            print(f"[JSON] Saved locally: {json_path}")
-
-            # Local JSON generation is the primary success condition.
+            print(f"[JSON] Saved locally: {json_path}", flush=True)
             row["json_done"] = "true"
             save_queue(rows)
 
-            # Google Drive is optional backup/synchronization.
+            # Optional PROD backup. Failure here does not invalidate local JSON.
             if ENV == "PROD":
                 try:
-                    folder_id = os.getenv("GDRIVE_JSON_FOLDER_ID")
+                    folder_id = os.getenv("GDRIVE_JSON_FOLDER_ID", "").strip()
                     if not folder_id:
                         raise ValueError("GDRIVE_JSON_FOLDER_ID is missing")
                     upload_drive_file(service, json_path, folder_id, drive_name)
-                    print(f"[DRIVE] JSON synced: {drive_name}")
+                    print(f"[DRIVE] JSON backup synced: {drive_name}", flush=True)
                 except Exception as error:
-                    print(f"[DRIVE WARNING] Local JSON is safe, but Drive sync failed: {error}")
-
-            print(f"SUCCESS: {video_title}")    
-
+                    print(f"[DRIVE WARNING] Local JSON is safe, but Drive backup failed: {error}", flush=True)
+            print(f"SUCCESS: {video_title}", flush=True)
         except subprocess.CalledProcessError as error:
             print(f"FAILED: {video_title} (exit code: {error.returncode})")
         except Exception as error:
@@ -240,6 +207,7 @@ def process_queue():
 
     completed = sum(row.get("json_done", "").strip().lower() == "true" for row in rows)
     print(f"\nQueue finished. JSON completed: {completed}/{len(rows)}")
-    
+
+
 if __name__ == "__main__":
     process_queue()
