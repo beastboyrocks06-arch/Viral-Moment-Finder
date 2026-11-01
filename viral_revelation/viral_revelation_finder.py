@@ -682,22 +682,17 @@ def get_video_duration(video_path):
 
 def format_moment(moment, index):
     return {
-        "moment_id": f"moment_{index:02d}",
+        "id": f"{index:02d}",
+        "start": moment["start"],
+        "end": moment["end"],
+        "duration": moment["duration"],
         "title": moment["title"],
         "reason": moment["reason"],
         "hook": moment["hook"],
         "score": moment["score"],
         "score_breakdown": moment["score_breakdown"],
         "highlight_words": moment["highlight_words"],
-        "duration": moment["duration"],
-        "posted": False,
-        "clips": [
-            {
-                "clip_id": f"clip_{index:02d}",
-                "start": moment["start"],
-                "end": moment["end"]
-            }
-        ]
+        "posted": False
     }
 
 
