@@ -39,8 +39,7 @@ VIDEO_DIR = BASE_DIR / "videos"
 RESULTS_DIR = BASE_DIR / "results"
 CHANNEL_RESULTS = RESULTS_DIR / CHANNEL.value
 SCOPES = ["https://www.googleapis.com/auth/drive"]
-MAX_VIDEOS_PER_RUN = 2
-
+MAX_VIDEOS_PER_RUN = 1
 
 def get_drive():
     credentials_json = os.getenv("GDRIVE_CREDENTIALS", "").strip()
