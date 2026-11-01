@@ -81,6 +81,18 @@ jobs:
 
           echo "All configuration checks passed."
 
+      - name: Test YouTube Channel ID variable
+        env:
+          CHANNEL_ID: ${{ vars.YOUTUBE_CHANNEL_VIRAL_REVELATION }}
+        run: |
+          if [ -z "$CHANNEL_ID" ]; then
+            echo "ERROR: GitHub variable is not accessible."
+            exit 1
+          fi
+          echo "SUCCESS: Channel ID is available."
+          echo "Length: ${#CHANNEL_ID}"
+          
+
       - name: Configure YouTube OAuth
         run: |
           set -e
