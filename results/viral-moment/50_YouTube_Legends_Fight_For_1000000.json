@@ -1,0 +1,87 @@
+{
+  "video": "50_YouTube_Legends_Fight_For_1000000.mp4",
+  "video_duration": 1927.44,
+  "total_moments": 3,
+  "highlight_words": [
+    "MORE",
+    "RIGHT",
+    "THERE",
+    "SOLO",
+    "HANDS",
+    "POSITIONS",
+    "LOCKED",
+    "ALLEY",
+    "ACROSS",
+    "COMMUNITY",
+    "NEVER"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "RIGHT",
+        "THERE"
+      ],
+      "posted": false,
+      "id": "01"
+    },
+    {
+      "start": 1662.25,
+      "end": 1715.23,
+      "duration": 52.98,
+      "title": "Nobody Expected What Happened Next! 😱",
+      "reason": "The surprising revelation from Jelly's build creates curiosity and keeps viewers engaged.",
+      "hook": "I was like, okay.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "MORE",
+        "RIGHT"
+      ],
+      "posted": false,
+      "id": "02"
+    },
+    {
+      "start": 1875.64,
+      "end": 1927.44,
+      "duration": 51.8,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "MORE",
+        "RIGHT",
+        "NEVER"
+      ],
+      "posted": false,
+      "id": "03"
+    }
+  ]
+}
