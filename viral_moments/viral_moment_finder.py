@@ -6,7 +6,7 @@ from llama_cpp import Llama
 # CONFIG
 BASE_DIR = Path(__file__).resolve().parent.parent
 VIDEO_DIR = BASE_DIR / "videos"
-RESULTS_DIR = BASE_DIR / "viral_moments" / "results"
+RESULTS_DIR = BASE_DIR / "results" / "viral-moment"
 MODEL_PATH = BASE_DIR / "models" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
 
 WHISPER_MODEL = "base"
@@ -15,7 +15,7 @@ COMPUTE_TYPE = "int8"
 CHUNK_SECONDS = 150
 OVERLAP_SECONDS = 25
 MIN_CLIP_DURATION = 30
-MAX_CLIP_DURATION = 60
+MAX_CLIP_DURATION = 90
 MAX_HIGHLIGHTS_PER_CHUNK = 12
 
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)

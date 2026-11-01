@@ -8,19 +8,26 @@ on:
     types:
       - completed
   workflow_dispatch:
+    inputs:
+      channel:
+        description: "Select channel"
+        required: true
+        type: choice
+        default: VIRAL_MOMENT
+        options:
+          - VIRAL_MOMENT
+          - DOCUMENTARY_MOMENT
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: viral-clip-generator
+  group: viral-clip-generator-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.channel || 'automatic' }}
   cancel-in-progress: false
 
 jobs:
   generate-clips:
-    # Run after the JSON generator only when it succeeds.
-    # Manual workflow_dispatch runs are also allowed.
     if: >
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
@@ -28,42 +35,92 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
+    strategy:
+      fail-fast: false
+      matrix:
+        channel:
+          - VIRAL_MOMENT
+          - DOCUMENTARY_MOMENT
+
+    # Automatic runs process both channels.
+    # Manual runs process only the selected channel.
     steps:
+      - name: Check selected channel
+        if: >
+          github.event_name == 'workflow_dispatch' &&
+          matrix.channel != github.event.inputs.channel
+        run: echo "Skipping unselected channel."
+
       - name: Checkout repository
+        if: >
+          github.event_name == 'workflow_run' ||
+          matrix.channel == github.event.inputs.channel
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: >
+          github.event_name == 'workflow_run' ||
+          matrix.channel == github.event.inputs.channel
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+          cache: pip
           cache-dependency-path: requirements.txt
 
       - name: Install FFmpeg
+        if: >
+          github.event_name == 'workflow_run' ||
+          matrix.channel == github.event.inputs.channel
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
       - name: Install Python dependencies
+        if: >
+          github.event_name == 'workflow_run' ||
+          matrix.channel == github.event.inputs.channel
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install google-api-python-client google-auth google-auth-httplib2 python-dotenv
 
       - name: Verify required files
+        if: >
+          github.event_name == 'workflow_run' ||
+          matrix.channel == github.event.inputs.channel
+        env:
+          CHANNEL: ${{ matrix.channel }}
         run: |
           test -f viral_moments/clip_generator.py
-          test -f viral_video_queue.csv
-          test -d results
-          test -d videos
+          test -f caption_generator.py
+          test -d sticker
+          if [ "$CHANNEL" = "VIRAL_MOMENT" ]; then
+            test -f viral_moment_queue.csv
+          else
+            test -f viral_documentary_queue.csv
+          fi
 
-      - name: Generate Shorts from CSV queue
+      - name: Generate clips
+        if: >
+          github.event_name == 'workflow_run' ||
+          matrix.channel == github.event.inputs.channel
+        env:
+          ENV: PROD
+          CHANNEL: ${{ matrix.channel }}
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
         run: |
           python viral_moments/clip_generator.py
 
       - name: Upload generated clips
+        if: >
+          (github.event_name == 'workflow_run' ||
+          matrix.channel == github.event.inputs.channel) &&
+          always()
         uses: actions/upload-artifact@v4
         with:
-          name: viral-generated-clips
-          path: clips/*.mp4
+          name: ${{ matrix.channel }}-generated-clips
+          path: clips/${{ matrix.channel == 'VIRAL_MOMENT' && 'viral-moment' || 'documentary-moment' }}/*.mp4
           if-no-files-found: warn
           retention-days: 7

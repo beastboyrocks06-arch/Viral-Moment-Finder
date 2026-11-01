@@ -1,0 +1,57 @@
+name: Prepare Qwen Model
+
+on:
+  schedule:
+    - cron: "30 0 * * 1,4" # Monday and Thursday, 6 AM IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qwen-model-preparation
+  cancel-in-progress: false
+
+jobs:
+  prepare-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore or Create Qwen Model Cache
+        id: qwen-cache
+        uses: actions/cache@v4
+        with:
+          path: models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+          key: qwen2.5-1.5b-instruct-q4-k-m-v1
+
+      - name: Set up Python
+        if: steps.qwen-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Hugging Face CLI
+        if: steps.qwen-cache.outputs.cache-hit != 'true'
+        run: pip install -U huggingface_hub
+
+      - name: Download Qwen Model
+        if: steps.qwen-cache.outputs.cache-hit != 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          mkdir -p models
+          hf download beast2314/viral-moment-qwen-model \
+            qwen2.5-1.5b-instruct-q4_k_m.gguf \
+            --local-dir models \
+            --token "$HF_TOKEN"
+
+      - name: Verify Model
+        run: |
+          MODEL="models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+          test -s "$MODEL" || exit 1
+          ls -lh "$MODEL"
+          echo "Qwen model is ready!"

@@ -3,9 +3,7 @@ name: Viral Moment Clip Uploader
 
 on:
   schedule:
-    # 8:00 AM IST
     - cron: "30 2 * * *"
-    # 8:00 PM IST
     - cron: "30 14 * * *"
   workflow_dispatch:
 
@@ -20,7 +18,7 @@ concurrency:
 jobs:
   upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360
 
     steps:
       - name: Checkout repository
@@ -32,7 +30,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+          cache: pip
           cache-dependency-path: requirements.txt
 
       - name: Install FFmpeg
@@ -44,14 +42,26 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install google-api-python-client google-auth google-auth-httplib2 python-dotenv
 
-      - name: Download latest generated clips
+      - name: Download Viral Moment clips
         uses: dawidd6/action-download-artifact@v6
         with:
-          workflow: generate-viral-moments-clips.yml
+          workflow: viral-moment-clip-generator.yml
           workflow_conclusion: success
-          name: viral-generated-clips
-          path: clips
+          name: VIRAL_MOMENT-generated-clips
+          path: clips/viral-moment
+          branch: main
+          if_no_artifact_found: warn
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Documentary Moment clips
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: viral-moment-clip-generator.yml
+          workflow_conclusion: success
+          name: DOCUMENTARY_MOMENT-generated-clips
+          path: clips/documentary-moment
           branch: main
           if_no_artifact_found: warn
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -72,14 +82,34 @@ jobs:
       - name: Verify uploader files
         run: |
           test -f viral_moment_clip_uploader.py
-          test -f viral_video_queue.csv
-          test -d results
-          mkdir -p clips
+          test -f viral_moment_queue.csv
+          test -f viral_documentary_queue.csv
 
-          echo "Available clips:"
-          ls -lh clips/ || true
+          mkdir -p clips/viral-moment clips/documentary-moment
 
-      - name: Upload videos to YouTube
+          echo "Viral Moment clips:"
+          ls -lh clips/viral-moment/ || true
+
+          echo "Documentary Moment clips:"
+          ls -lh clips/documentary-moment/ || true
+
+      - name: Upload Viral Moment videos
+        env:
+          ENV: PROD
+          CHANNEL: VIRAL_MOMENT
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+          YOUTUBE_PRIVACY_STATUS: private
+        run: |
+          python viral_moment_clip_uploader.py
+
+      - name: Upload Documentary Moment videos
+        env:
+          ENV: PROD
+          CHANNEL: DOCUMENTARY_MOMENT
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
+          YOUTUBE_PRIVACY_STATUS: private
         run: |
           python viral_moment_clip_uploader.py
 
@@ -88,10 +118,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add viral_video_queue.csv results/
+          git add viral_moment_queue.csv viral_documentary_queue.csv
 
           if git diff --cached --quiet; then
-            echo "No upload progress changes to save."
+            echo "No queue progress changes to save."
           else
             git commit -m "Update YouTube upload progress"
             git push

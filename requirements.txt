@@ -3,3 +3,6 @@ faster-whisper
 huggingface_hub
 python-dotenv
 json-repair
+google-api-python-client
+google-auth
+google-auth-httplib2

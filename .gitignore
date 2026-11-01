@@ -8,3 +8,4 @@ models/*.gguf
 videos/
 clips/
 downloads/
+gdrive-credentials.json

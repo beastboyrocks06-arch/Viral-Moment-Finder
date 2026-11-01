@@ -1,43 +1,73 @@
-
 import argparse
+import csv
+import io
 import json
+import os
 import random
 import tempfile
 import traceback
+import sys
 from pathlib import Path
-import csv
+from enum import Enum
+
 import numpy as np
 from PIL import Image
+from dotenv import load_dotenv
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
-from moviepy import (
-    VideoFileClip,
-    ImageClip,
-    CompositeVideoClip,
-    CompositeAudioClip,
-)
+from moviepy import VideoFileClip, ImageClip, CompositeVideoClip, CompositeAudioClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.video.fx import FadeIn
 
-import sys
-from pathlib import Path
-
+load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Add project root to Python import path
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 import caption_generator as caption
 
+class Channel(Enum):
+    VIRAL_MOMENT = "viral-moment"
+    DOCUMENTARY_MOMENT = "documentary-moment"
+
+ENV = os.getenv("ENV", "DEV").upper()
+CHANNEL = Channel[os.getenv("CHANNEL", "VIRAL_MOMENT").upper()]
+
+CHANNEL_CONFIG = {
+    Channel.VIRAL_MOMENT: {
+        "queue": BASE_DIR / "viral_moment_queue.csv",
+        "results": BASE_DIR / "results" / "viral-moment",
+        "clips": BASE_DIR / "clips" / "viral-moment",
+    },
+    Channel.DOCUMENTARY_MOMENT: {
+        "queue": BASE_DIR / "viral_documentary_queue.csv",
+        "results": BASE_DIR / "results" / "documentary-moment",
+        "clips": BASE_DIR / "clips" / "documentary-moment",
+    },
+}
+
+if ENV not in {"DEV", "PROD"}:
+    raise ValueError("ENV must be DEV or PROD")
+
 VIDEO_DIR = BASE_DIR / "videos"
-RESULTS_DIR = BASE_DIR / "viral_moments" / "results"
-OUTPUT_DIR = BASE_DIR / "clips"
+QUEUE_FILE = CHANNEL_CONFIG[CHANNEL]["queue"]
+RESULTS_DIR = CHANNEL_CONFIG[CHANNEL]["results"]
+OUTPUT_DIR = CHANNEL_CONFIG[CHANNEL]["clips"]
+
 STICKER_DIR = BASE_DIR / "sticker"
 POP_SFX = BASE_DIR / "sfx" / "pop_click.mp3"
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-QUEUE_FILE = BASE_DIR / "viral_video_queue.csv"
+
 WIDTH, HEIGHT, FPS = 1080, 1920, 30
-MIN_DURATION, MAX_DURATION = 20, 60
+MIN_DURATION, MAX_DURATION = 30, 90
+
+SCOPES = ["https://www.googleapis.com/auth/drive"]
+GDRIVE_SOURCE_FOLDER_ID = os.getenv("GDRIVE_SOURCE_FOLDER_ID")
+GDRIVE_JSON_FOLDER_ID = os.getenv("GDRIVE_JSON_FOLDER_ID")
+
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 CAPTION_STYLES = [
     caption.CONFIG_STYLE_1,
@@ -75,11 +105,112 @@ def initialize():
     print("\n" + "=" * 60)
     print("VIRAL MOMENT CLIP GENERATOR")
     print("=" * 60)
-    print(f"Videos:  {VIDEO_DIR}")
-    print(f"Results: {RESULTS_DIR}")
-    print(f"Output:  {OUTPUT_DIR}")
-    print(f"Stickers: {STICKER_DIR}")
+    print(f"Environment: {ENV}")
+    print(f"Channel:     {CHANNEL.value}")
+    print(f"Queue:       {QUEUE_FILE}")
+    print(f"Videos:      {VIDEO_DIR}")
+    print(f"Results:     {RESULTS_DIR}")
+    print(f"Output:      {OUTPUT_DIR}")
 
+def get_drive():
+    credentials_json = os.getenv("GDRIVE_CREDENTIALS")
+
+    if credentials_json:
+        credentials = Credentials.from_service_account_info(
+            json.loads(credentials_json),
+            scopes=SCOPES
+        )
+    else:
+        credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if not credentials_path:
+            raise RuntimeError("Google Drive credentials are not configured.")
+
+        credentials = Credentials.from_service_account_file(
+            credentials_path,
+            scopes=SCOPES
+        )
+
+    return build("drive", "v3", credentials=credentials, cache_discovery=False)
+
+
+def find_drive_file(service, folder_id, filename):
+    escaped_name = filename.replace("\\", "\\\\").replace("'", "\\'")
+    query = (
+        f"'{folder_id}' in parents and "
+        f"name = '{escaped_name}' and trashed = false"
+    )
+
+    response = service.files().list(
+        q=query,
+        fields="files(id,name)",
+        pageSize=10
+    ).execute()
+
+    files = response.get("files", [])
+    return files[0] if files else None
+
+
+def download_drive_file(service, file_id, destination):
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    request = service.files().get_media(fileId=file_id)
+
+    with destination.open("wb") as file:
+        downloader = MediaIoBaseDownload(file, request)
+        done = False
+
+        while not done:
+            _, done = downloader.next_chunk()
+
+    return destination
+
+
+def get_source_video(filename, service=None):
+    local_path = find_source_video(filename)
+
+    if local_path:
+        return local_path
+
+    if ENV != "PROD":
+        return None
+
+    if not service or not GDRIVE_SOURCE_FOLDER_ID:
+        raise RuntimeError("Drive source folder or service is not configured.")
+
+    drive_file = find_drive_file(service, GDRIVE_SOURCE_FOLDER_ID, Path(filename).name)
+
+    if not drive_file:
+        print(f"[DRIVE] Source video not found: {filename}")
+        return None
+
+    destination = VIDEO_DIR / Path(filename).name
+    print(f"[DRIVE] Downloading source video: {filename}")
+
+    return download_drive_file(service, drive_file["id"], destination)
+
+
+def get_result_json(filename, service=None):
+    local_path = RESULTS_DIR / filename
+
+    if local_path.exists():
+        return local_path
+
+    if ENV != "PROD":
+        return None
+
+    if not service or not GDRIVE_JSON_FOLDER_ID:
+        raise RuntimeError("Drive JSON folder or service is not configured.")
+
+    drive_filename = f"{CHANNEL.value}__{filename}"
+    drive_file = find_drive_file(service, GDRIVE_JSON_FOLDER_ID, drive_filename)
+
+    if not drive_file:
+        print(f"[DRIVE] JSON not found: {drive_filename}")
+        return None
+
+    print(f"[DRIVE] Downloading JSON: {drive_filename}")
+    return download_drive_file(service, drive_file["id"], local_path)
 
 # ============================================================
 # FILE DISCOVERY
@@ -590,7 +721,7 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
 # PROCESS ONE JSON FILE
 # ============================================================
 
-def process_result(json_path, video_override=None):
+def process_result(json_path, video_override=None, service=None):
     print(f"\n[JSON] Processing: {json_path.name}")
 
     data = load_json(json_path)
@@ -603,7 +734,7 @@ def process_result(json_path, video_override=None):
         print("[ERROR] Video filename missing from JSON.")
         return
 
-    source_path = find_source_video(video_filename)
+    source_path = get_source_video(video_filename, service)
 
     if source_path is None:
         print(f"[ERROR] Source video not found: {video_filename}")
@@ -612,7 +743,6 @@ def process_result(json_path, video_override=None):
     print(f"[VIDEO] Found: {source_path.name}")
 
     moments = data.get("moments", [])
-
     if not isinstance(moments, list) or not moments:
         print("[INFO] No moments found in JSON.")
         return
@@ -645,7 +775,6 @@ def process_result(json_path, video_override=None):
         f"\n[SUMMARY] {json_path.name} | "
         f"Generated: {generated} | Skipped: {skipped}"
     )
-
 
 # ============================================================
 # MAIN
