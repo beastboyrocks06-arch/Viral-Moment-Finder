@@ -1,3 +1,4 @@
+
 import argparse
 import csv
 import json
@@ -15,7 +16,7 @@ from PIL import Image
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 
 from moviepy import (
     VideoFileClip,
@@ -49,7 +50,7 @@ class Channel(Enum):
 
 
 ENV = os.getenv("ENV", "DEV").upper()
-CHANNEL = Channel[os.getenv("CHANNEL", "REVELATION_MOMENT").upper()]
+CHANNEL = Channel[os.getenv("CHANNEL", "VIRAL_MOMENT").upper()]
 
 CHANNEL_CONFIG = {
     Channel.VIRAL_MOMENT: {
@@ -85,13 +86,15 @@ WIDTH, HEIGHT, FPS = 1080, 1920, 30
 MIN_DURATION = 30
 MAX_DURATION = 90
 MAX_VIDEOS_PER_RUN = 1
-# Revelation finder currently generates 30-60 second moments.
+
 REVELATION_MIN_DURATION = 30
 REVELATION_MAX_DURATION = 60
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
+
 GDRIVE_SOURCE_FOLDER_ID = os.getenv("GDRIVE_SOURCE_FOLDER_ID")
 GDRIVE_JSON_FOLDER_ID = os.getenv("GDRIVE_JSON_FOLDER_ID")
+GDRIVE_CLIPS_FOLDER_ID = os.getenv("GDRIVE_CLIPS_FOLDER_ID")
 
 CAPTION_STYLES = [
     caption.CONFIG_STYLE_1,
@@ -181,7 +184,7 @@ def find_drive_file(service, folder_id, filename):
 
     response = service.files().list(
         q=query,
-        fields="files(id,name)",
+        fields="files(id,name,size)",
         pageSize=10,
         supportsAllDrives=True,
         includeItemsFromAllDrives=True
@@ -220,6 +223,51 @@ def download_drive_file(service, file_id, destination):
         if temp_path.exists():
             temp_path.unlink()
         raise
+
+
+def upload_clip_to_drive(service, clip_path):
+    if not GDRIVE_CLIPS_FOLDER_ID:
+        raise RuntimeError("GDRIVE_CLIPS_FOLDER_ID is not configured.")
+
+    clip_path = Path(clip_path)
+
+    if not clip_path.exists() or clip_path.stat().st_size == 0:
+        raise RuntimeError(f"Clip missing or empty: {clip_path.name}")
+
+    # Avoid duplicate uploads when retrying a partially completed run.
+    existing = find_drive_file(
+        service,
+        GDRIVE_CLIPS_FOLDER_ID,
+        clip_path.name
+    )
+
+    if existing:
+        print(f"[DRIVE] Already uploaded: {clip_path.name}")
+        return True
+
+    print(f"[DRIVE] Uploading: {clip_path.name}")
+
+    media = MediaFileUpload(
+        str(clip_path),
+        mimetype="video/mp4",
+        resumable=True
+    )
+
+    uploaded = service.files().create(
+        body={
+            "name": clip_path.name,
+            "parents": [GDRIVE_CLIPS_FOLDER_ID]
+        },
+        media_body=media,
+        fields="id,name,size",
+        supportsAllDrives=True
+    ).execute()
+
+    if not uploaded.get("id"):
+        raise RuntimeError(f"Drive upload failed: {clip_path.name}")
+
+    print(f"[DRIVE] Uploaded successfully: {uploaded['name']}")
+    return True
 
 
 def get_result_json(filename, service=None):
@@ -261,7 +309,6 @@ def get_result_json(filename, service=None):
 
 def find_source_video(filename):
     requested = Path(filename)
-
     exact_path = VIDEO_DIR / requested.name
 
     if exact_path.exists():
@@ -326,7 +373,6 @@ def load_json(path):
     try:
         with open(path, "r", encoding="utf-8") as file:
             return json.load(file)
-
     except Exception as error:
         print(f"[ERROR] Could not read JSON: {error}")
         return None
@@ -398,7 +444,6 @@ def validate_moment(moment, video_duration):
 
         return segments
 
-    # VIRAL_MOMENT and DOCUMENTARY_MOMENT
     try:
         start = float(moment["start"])
         end = float(moment["end"])
@@ -412,7 +457,6 @@ def validate_moment(moment, video_duration):
 
     start = max(0.0, start)
     end = min(end, video_duration)
-
     duration = end - start
 
     if start >= video_duration:
@@ -474,7 +518,6 @@ def create_captions(audio_path, duration, highlight_words):
                 .with_start(0)
                 .with_duration(duration)
             )
-
             print("[CAPTIONS] Generated successfully.")
 
         return caption_clip
@@ -518,14 +561,12 @@ def create_one_sticker(path, video_duration):
     try:
         with Image.open(path) as image:
             image = image.convert("RGBA")
-
             original_w, original_h = image.size
 
             if original_w <= 0 or original_h <= 0:
                 raise ValueError("Invalid sticker dimensions.")
 
             scale = STICKER_TARGET_WIDTH / original_w
-
             new_w = STICKER_TARGET_WIDTH
             new_h = max(1, round(original_h * scale))
 
@@ -536,25 +577,14 @@ def create_one_sticker(path, video_duration):
 
             image_array = np.array(image)
 
-        base = ImageClip(
-            image_array,
-            transparent=True
-        )
-
+        base = ImageClip(image_array, transparent=True)
         original_w, original_h = base.size
 
-        max_start = max(
-            0,
-            video_duration - STICKER_MIN_DURATION
-        )
-
+        max_start = max(0, video_duration - STICKER_MIN_DURATION)
         start = random.uniform(0, max_start)
 
         duration = min(
-            random.uniform(
-                STICKER_MIN_DURATION,
-                STICKER_MAX_DURATION
-            ),
+            random.uniform(STICKER_MIN_DURATION, STICKER_MAX_DURATION),
             video_duration - start
         )
 
@@ -565,12 +595,7 @@ def create_one_sticker(path, video_duration):
         side = random.choice(["left", "right"])
         vertical = random.choice(["top", "middle"])
 
-        x = (
-            65
-            if side == "left"
-            else WIDTH - original_w - 65
-        )
-
+        x = 65 if side == "left" else WIDTH - original_w - 65
         y = 260 if vertical == "top" else 720
 
         x = max(15, min(x, WIDTH - original_w - 15))
@@ -595,9 +620,7 @@ def create_one_sticker(path, video_duration):
             .with_start(start)
             .with_duration(duration)
             .with_position(position_at)
-            .with_effects([
-                FadeIn(min(0.15, duration / 2))
-            ])
+            .with_effects([FadeIn(min(0.15, duration / 2))])
         )
 
         print(
@@ -636,7 +659,6 @@ def create_stickers(duration):
     )
 
     selected = random.sample(files, min(count, len(files)))
-
     sticker_clips = []
     sticker_times = []
 
@@ -688,7 +710,6 @@ def create_final_audio(source_audio, sticker_times, sfx_clips):
                 sfx = AudioFileClip(str(POP_SFX)).with_start(start)
                 sfx_clips.append(sfx)
                 audio_layers.append(sfx)
-
             except Exception as error:
                 print(f"[SFX] Could not load pop sound: {error}")
 
@@ -735,19 +756,18 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
     output_path = OUTPUT_DIR / f"{output_name}.mp4"
     temp_output_path = OUTPUT_DIR / f"{output_name}.temp.mp4"
 
+    # An existing valid output counts as successfully generated.
     if output_path.exists() and output_path.stat().st_size > 0:
-        print(f"[SKIP] Already exists: {output_path.name}")
-        return False
+        print(f"[SKIP] Already generated: {output_path.name}")
+        return True
 
     try:
         source = VideoFileClip(str(source_path))
-
         segments = validate_moment(moment, source.duration)
 
         if not segments:
             return False
 
-        # Extract source segments in their original order.
         for index, (start, end) in enumerate(segments, start=1):
             print(
                 f"[SEGMENT {index}] "
@@ -755,11 +775,8 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
                 f"({end - start:.2f}s)"
             )
 
-            segment_clips.append(
-                source.subclipped(start, end)
-            )
+            segment_clips.append(source.subclipped(start, end))
 
-        # Join RevelationClips segments into one Short.
         if len(segment_clips) == 1:
             moment_clip = segment_clips[0]
         else:
@@ -826,7 +843,6 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
         ):
             raise RuntimeError("Video export failed or produced an empty file.")
 
-        # Publish the final filename only after successful export.
         temp_output_path.replace(output_path)
 
         print(f"[SUCCESS] Created: {output_path}")
@@ -836,12 +852,11 @@ def generate_clip(source_path, moment, video_id, moment_index, global_highlights
         print(f"[ERROR] Clip generation failed: {error}")
         traceback.print_exc()
 
-        for path in [temp_output_path]:
-            if path.exists():
-                try:
-                    path.unlink()
-                except Exception:
-                    pass
+        if temp_output_path.exists():
+            try:
+                temp_output_path.unlink()
+            except Exception:
+                pass
 
         return False
 
@@ -880,39 +895,46 @@ def process_result(json_path, video_override=None, service=None):
     data = load_json(json_path)
 
     if not isinstance(data, dict):
-        return
+        print("[ERROR] Invalid JSON.")
+        return False, []
 
     video_filename = video_override or data.get("video")
 
     if not isinstance(video_filename, str) or not video_filename.strip():
         print("[ERROR] Video filename missing from JSON.")
-        return
+        return False, []
 
     source_path = get_source_video(video_filename, service)
 
     if source_path is None:
         print(f"[ERROR] Source video not found: {video_filename}")
-        return
+        return False, []
 
     print(f"[VIDEO] Found: {source_path.name}")
 
     moments = data.get("moments", [])
 
     if not isinstance(moments, list) or not moments:
-        print("[INFO] No moments found in JSON.")
-        return
+        print("[ERROR] No moments found in JSON.")
+        return False, []
 
     global_highlights = data.get("highlight_words", [])
 
     if not isinstance(global_highlights, list):
         global_highlights = []
 
-    generated = 0
-    skipped = 0
+    all_successful = True
+    expected_files = []
 
     for index, moment in enumerate(moments, start=1):
+        output_path = OUTPUT_DIR / (
+            f"{Path(video_filename).stem}_{index:02d}.mp4"
+        )
+        expected_files.append(output_path)
+
         if not isinstance(moment, dict):
-            skipped += 1
+            print(f"[ERROR] Moment {index} is not a valid object.")
+            all_successful = False
             continue
 
         success = generate_clip(
@@ -923,15 +945,162 @@ def process_result(json_path, video_override=None, service=None):
             global_highlights=global_highlights
         )
 
-        if success:
-            generated += 1
-        else:
-            skipped += 1
+        if not success:
+            all_successful = False
+
+    # Verify every expected MP4 exists and is non-empty.
+    for path in expected_files:
+        if not path.exists() or path.stat().st_size == 0:
+            print(f"[ERROR] Expected clip missing: {path.name}")
+            all_successful = False
+
+    generated = sum(
+        1 for path in expected_files
+        if path.exists() and path.stat().st_size > 0
+    )
 
     print(
         f"\n[SUMMARY] {json_path.name} | "
-        f"Generated: {generated} | Skipped: {skipped}"
+        f"Expected: {len(expected_files)} | "
+        f"Available: {generated} | "
+        f"Success: {all_successful}"
     )
+
+    return all_successful, expected_files
+
+
+# ============================================================
+# CSV QUEUE
+# ============================================================
+
+def read_queue():
+    if not QUEUE_FILE.exists():
+        raise FileNotFoundError(f"Queue file not found: {QUEUE_FILE}")
+
+    with QUEUE_FILE.open(
+        "r",
+        encoding="utf-8-sig",
+        newline=""
+    ) as file:
+        reader = csv.DictReader(file)
+        fieldnames = reader.fieldnames or []
+        rows = list(reader)
+
+    required_columns = {
+        "video_title",
+        "json_done",
+        "post_done",
+        "clip_done"
+    }
+
+    missing = required_columns - set(fieldnames)
+
+    if missing:
+        raise RuntimeError(
+            f"CSV is missing columns: {', '.join(sorted(missing))}"
+        )
+
+    return fieldnames, rows
+
+
+def update_clip_done(video_filename):
+    fieldnames, rows = read_queue()
+    updated = False
+
+    for row in rows:
+        if (row.get("video_title") or "").strip() == video_filename:
+            row["clip_done"] = "true"
+            updated = True
+            break
+
+    if not updated:
+        raise RuntimeError(
+            f"Could not find video in CSV to update: {video_filename}"
+        )
+
+    # Write atomically to avoid leaving a partially written CSV.
+    temp_path = QUEUE_FILE.with_suffix(".tmp")
+
+    with temp_path.open(
+        "w",
+        encoding="utf-8",
+        newline=""
+    ) as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=fieldnames,
+            extrasaction="ignore"
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+    temp_path.replace(QUEUE_FILE)
+
+    print(f"[QUEUE] clip_done=true saved for: {video_filename}")
+
+
+def select_next_video(rows, service):
+    for row in rows:
+        video = (row.get("video_title") or "").strip()
+
+        if not video:
+            continue
+
+        if (row.get("json_done") or "").strip().lower() != "true":
+            continue
+
+        if (row.get("clip_done") or "").strip().lower() == "true":
+            continue
+
+        json_filename = f"{Path(video).stem}.json"
+        json_path = RESULTS_DIR / json_filename
+
+        if not json_path.exists():
+            json_path = get_result_json(json_filename, service)
+
+        if not json_path or not json_path.exists():
+            print(f"[SKIP] JSON missing: {json_filename}")
+            continue
+
+        return video, json_path
+
+    return None, None
+
+
+# ============================================================
+# UPLOAD AND VERIFY ALL CLIPS
+# ============================================================
+
+def upload_all_clips(service, clip_paths):
+    if not clip_paths:
+        raise RuntimeError("No clips were generated.")
+
+    if not GDRIVE_CLIPS_FOLDER_ID:
+        raise RuntimeError("GDRIVE_CLIPS_FOLDER_ID is not configured.")
+
+    for clip_path in clip_paths:
+        if not clip_path.exists() or clip_path.stat().st_size == 0:
+            raise RuntimeError(f"Clip missing or empty: {clip_path.name}")
+
+        upload_clip_to_drive(service, clip_path)
+
+    # Verify every expected file exists in the destination Drive folder.
+    for clip_path in clip_paths:
+        drive_file = find_drive_file(
+            service,
+            GDRIVE_CLIPS_FOLDER_ID,
+            clip_path.name
+        )
+
+        if not drive_file:
+            raise RuntimeError(
+                f"Drive verification failed: {clip_path.name}"
+            )
+
+        print(f"[DRIVE] Verified: {clip_path.name}")
+
+    print(f"[DRIVE] All {len(clip_paths)} clips verified.")
+    return True
 
 
 # ============================================================
@@ -944,11 +1113,9 @@ def resolve_json_path(filename):
     if path.is_absolute():
         return path
 
-    # First check the path supplied from the project root.
     if path.exists():
         return path
 
-    # Then check the active channel's results directory.
     return RESULTS_DIR / path.name
 
 
@@ -963,6 +1130,7 @@ def main(json_file=None, video_file=None):
     service = get_drive() if ENV == "PROD" else None
 
     # Manual single-JSON processing.
+    # Manual mode does not update the queue's clip_done column.
     if json_file:
         json_path = resolve_json_path(json_file)
 
@@ -973,92 +1141,67 @@ def main(json_file=None, video_file=None):
             )
 
         if not json_path or not json_path.exists():
-            print(f"[ERROR] JSON file not found: {json_file}")
-            return
+            raise RuntimeError(f"JSON file not found: {json_file}")
 
-        process_result(
+        success, expected_files = process_result(
             json_path,
             video_override=video_file,
             service=service
         )
+
+        if not success:
+            raise RuntimeError("One or more clips failed to generate.")
+
+        if ENV == "PROD":
+            upload_all_clips(service, expected_files)
+
         return
-    
-    # Automatic queue processing: ONE source video per workflow run.
-    if not QUEUE_FILE.exists():
-        print(f"[ERROR] Queue file not found: {QUEUE_FILE}")
-        return
 
-    with QUEUE_FILE.open(
-        "r",
-        encoding="utf-8-sig",
-        newline=""
-    ) as file:
-        rows = list(csv.DictReader(file))
+    # Automatic queue processing: ONE source video per run.
+    fieldnames, rows = read_queue()
 
-    selected_row = None
+    video, json_path = select_next_video(rows, service)
 
-    for row in rows:
-        video = (row.get("video_title") or "").strip()
-
-        if not video:
-            continue
-
-        if (row.get("json_done") or "").strip().lower() != "true":
-            continue
-
-        json_filename = f"{Path(video).stem}.json"
-        json_path = RESULTS_DIR / json_filename
-
-        if not json_path.exists():
-            json_path = get_result_json(json_filename, service)
-
-        if not json_path or not json_path.exists():
-            print(f"[SKIP] JSON missing: {json_filename}")
-            continue
-
-        # Skip videos whose clips have already been generated.
-        output_prefix = Path(video).stem + "_"
-        existing_clips = list(OUTPUT_DIR.glob(f"{output_prefix}*.mp4"))
-
-        expected_moments = load_json(json_path)
-        expected_count = (
-            len(expected_moments.get("moments", []))
-            if isinstance(expected_moments, dict)
-            else 0
-        )
-
-        if expected_count > 0 and len(existing_clips) >= expected_count:
-            print(f"[SKIP] Clips already generated: {video}")
-            continue
-
-        selected_row = row
-        break
-
-    if selected_row is None:
+    if not video:
         print("[QUEUE] No eligible source videos found.")
         return
-
-    video = selected_row["video_title"].strip()
-    json_filename = f"{Path(video).stem}.json"
-    json_path = RESULTS_DIR / json_filename
-
-    if not json_path.exists():
-        json_path = get_result_json(json_filename, service)
 
     print("\n" + "=" * 60)
     print(f"[QUEUE] SELECTED VIDEO: {video}")
     print("[QUEUE] Processing only this source video.")
     print("=" * 60)
 
-    process_result(
+    success, expected_files = process_result(
         json_path,
         video_override=video,
         service=service
     )
 
+    if not success:
+        raise RuntimeError(
+            f"Clip generation incomplete for {video}. "
+            "clip_done remains false."
+        )
+
+    # In production, upload and verify every expected MP4 first.
+    if ENV == "PROD":
+        upload_all_clips(service, expected_files)
+    else:
+        print(
+            "[DEV] Clips generated locally. "
+            "Drive upload and clip_done update are skipped."
+        )
+        return
+
+    # Update CSV only after successful generation AND Drive verification.
+    update_clip_done(video)
+
     print("\n" + "=" * 60)
-    print(f"[DONE] Finished processing: {video}")
+    print(f"[SUCCESS] Completed: {video}")
+    print("[SUCCESS] All clips generated and verified in Google Drive.")
+    print("[SUCCESS] clip_done=true")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
