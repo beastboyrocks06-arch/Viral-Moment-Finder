@@ -78,36 +78,57 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      
       - name: Test Google Drive Connection
         env:
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
           GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
         run: |
-          python -c "
-          import os, json
+          python - <<'PY'
+          import os
+          import json
           from google.oauth2.service_account import Credentials
           from googleapiclient.discovery import build
 
+          raw = os.environ.get("GDRIVE_CREDENTIALS", "").strip()
+          if not raw:
+              raise RuntimeError("GDRIVE_CREDENTIALS secret is missing or empty.")
+
+          try:
+              service_account_info = json.loads(raw)
+          except json.JSONDecodeError as exc:
+              raise RuntimeError("GDRIVE_CREDENTIALS is not valid JSON.") from exc
+
+          if service_account_info.get("type") != "service_account":
+              raise RuntimeError("Invalid Google service-account credentials.")
+
           credentials = Credentials.from_service_account_info(
-              json.loads(os.environ['GDRIVE_CREDENTIALS']),
-              scopes=['https://www.googleapis.com/auth/drive']
+              service_account_info,
+              scopes=["https://www.googleapis.com/auth/drive"]
           )
 
-          drive = build('drive', 'v3', credentials=credentials)
+          drive = build("drive", "v3", credentials=credentials)
 
-          for folder in ['GDRIVE_SOURCE_FOLDER_ID', 'GDRIVE_JSON_FOLDER_ID']:
+          for folder in ["GDRIVE_SOURCE_FOLDER_ID", "GDRIVE_JSON_FOLDER_ID"]:
+              folder_id = os.environ.get(folder, "").strip()
+              if not folder_id:
+                  raise RuntimeError(f"{folder} secret is missing or empty.")
+
               result = drive.files().get(
-                  fileId=os.environ[folder],
-                  fields='id,name,mimeType',
+                  fileId=folder_id,
+                  fields="id,name,mimeType",
                   supportsAllDrives=True
               ).execute()
 
-              if result['mimeType'] != 'application/vnd.google-apps.folder':
-                  raise RuntimeError(f'{folder} is not a Google Drive folder')
+              if result["mimeType"] != "application/vnd.google-apps.folder":
+                  raise RuntimeError(f"{folder} is not a Google Drive folder.")
 
-              print(f'{folder}: {result["name"]} - OK')
-          "
+              print(f"{folder}: {result['name']} - OK")
+
+          print("Google Drive connection successful!")
+          PY
+
 
       - name: Generate pending JSON files
         env:
