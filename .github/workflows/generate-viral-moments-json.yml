@@ -13,7 +13,6 @@ on:
         default: VIRAL_MOMENT
         options:
           - VIRAL_MOMENT
-          - DOCUMENTARY_MOMENT
 
 permissions:
   contents: write
@@ -107,6 +106,7 @@ jobs:
 
       - name: Test Google Drive Connection
         env:
+          HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
         run: |

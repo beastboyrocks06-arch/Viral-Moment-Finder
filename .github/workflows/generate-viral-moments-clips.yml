@@ -8,22 +8,13 @@ on:
     types:
       - completed
   workflow_dispatch:
-    inputs:
-      channel:
-        description: "Select channel"
-        required: true
-        type: choice
-        default: VIRAL_MOMENT
-        options:
-          - VIRAL_MOMENT
-          - DOCUMENTARY_MOMENT
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: viral-clip-generator-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.channel || 'automatic' }}
+  group: viral-clip-generator
   cancel-in-progress: false
 
 jobs:
@@ -35,32 +26,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
-    strategy:
-      fail-fast: false
-      matrix:
-        channel:
-          - VIRAL_MOMENT
-          - DOCUMENTARY_MOMENT
+    env:
+      ENV: PROD
+      CHANNEL: VIRAL_MOMENT
 
-    # Automatic runs process both channels.
-    # Manual runs process only the selected channel.
     steps:
-      - name: Check selected channel
-        if: >
-          github.event_name == 'workflow_dispatch' &&
-          matrix.channel != github.event.inputs.channel
-        run: echo "Skipping unselected channel."
-
       - name: Checkout repository
-        if: >
-          github.event_name == 'workflow_run' ||
-          matrix.channel == github.event.inputs.channel
         uses: actions/checkout@v4
 
       - name: Set up Python
-        if: >
-          github.event_name == 'workflow_run' ||
-          matrix.channel == github.event.inputs.channel
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -68,59 +42,74 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Install FFmpeg
-        if: >
-          github.event_name == 'workflow_run' ||
-          matrix.channel == github.event.inputs.channel
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
       - name: Install Python dependencies
-        if: >
-          github.event_name == 'workflow_run' ||
-          matrix.channel == github.event.inputs.channel
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install google-api-python-client google-auth google-auth-httplib2 python-dotenv
 
       - name: Verify required files
-        if: >
-          github.event_name == 'workflow_run' ||
-          matrix.channel == github.event.inputs.channel
-        env:
-          CHANNEL: ${{ matrix.channel }}
         run: |
           test -f viral_clip_generator.py
           test -f caption_generator.py
           test -d sticker
-          if [ "$CHANNEL" = "VIRAL_MOMENT" ]; then
-            test -f viral_moment_queue.csv
-          else
-            test -f viral_documentary_queue.csv
-          fi
+          test -f viral_moment_queue.csv
 
-      - name: Generate clips
-        if: >
-          github.event_name == 'workflow_run' ||
-          matrix.channel == github.event.inputs.channel
+      - name: Generate Viral Moment Clips
         env:
-          ENV: PROD
-          CHANNEL: ${{ matrix.channel }}
+          HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_SOURCE_FOLDER_ID: ${{ secrets.GDRIVE_SOURCE_FOLDER_ID }}
-          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
         run: |
           python viral_clip_generator.py
 
-      - name: Upload generated clips
-        if: >
-          (github.event_name == 'workflow_run' ||
-          matrix.channel == github.event.inputs.channel) &&
-          always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.channel }}-generated-clips
-          path: clips/${{ matrix.channel == 'VIRAL_MOMENT' && 'viral-moment' || 'documentary-moment' }}/*.mp4
-          if-no-files-found: warn
-          retention-days: 7
+      - name: Upload clips to Google Drive
+        if: success()
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          import json
+          from pathlib import Path
+          from google.oauth2.service_account import Credentials
+          from googleapiclient.discovery import build
+          from googleapiclient.http import MediaFileUpload
+
+          clips = sorted(Path("clips/viral-moment").glob("*.mp4"))
+
+          if not clips:
+              print("[INFO] No MP4 files found.")
+              raise SystemExit(0)
+
+          credentials = Credentials.from_service_account_info(
+              json.loads(os.environ["GDRIVE_CREDENTIALS"]),
+              scopes=["https://www.googleapis.com/auth/drive"]
+          )
+
+          service = build("drive", "v3", credentials=credentials)
+          folder_id = os.environ["GDRIVE_CLIPS_FOLDER_ID"]
+
+          for clip in clips:
+              media = MediaFileUpload(
+                  str(clip),
+                  mimetype="video/mp4",
+                  resumable=True
+              )
+
+              uploaded = service.files().create(
+                  body={"name": clip.name, "parents": [folder_id]},
+                  media_body=media,
+                  fields="id,name",
+                  supportsAllDrives=True
+              ).execute()
+
+              print(f"[SUCCESS] Uploaded to Google Drive: {uploaded['name']}")
+
+          print(f"[DONE] {len(clips)} MP4 files uploaded.")
+          PY
