@@ -31,6 +31,7 @@ CATEGORY_ID = os.getenv("YOUTUBE_CATEGORY_ID", "24")
 MAX_UPLOADS_PER_RUN = 1
 
 GDRIVE_JSON_FOLDER_ID = os.getenv("GDRIVE_JSON_FOLDER_ID")
+GDRIVE_CLIPS_FOLDER_ID = os.getenv("GDRIVE_CLIPS_FOLDER_ID")
 
 
 class Channel(Enum):
@@ -71,12 +72,10 @@ def load_youtube():
         if credentials.expired and credentials.refresh_token:
             print("[YOUTUBE] Refreshing OAuth token...")
             credentials.refresh(Request())
-
             TOKEN_FILE.write_text(
                 credentials.to_json(),
                 encoding="utf-8"
             )
-
             print("[YOUTUBE] OAuth token refreshed.")
         else:
             raise RuntimeError(
@@ -109,6 +108,11 @@ def load_drive():
     if not GDRIVE_JSON_FOLDER_ID:
         raise RuntimeError(
             "GDRIVE_JSON_FOLDER_ID environment variable is missing."
+        )
+
+    if not GDRIVE_CLIPS_FOLDER_ID:
+        raise RuntimeError(
+            "GDRIVE_CLIPS_FOLDER_ID environment variable is missing."
         )
 
     credentials = Credentials.from_authorized_user_info(
@@ -148,21 +152,25 @@ def load_drive():
 
 
 # ============================================================
-# GOOGLE DRIVE JSON OPERATIONS
+# GOOGLE DRIVE FILE OPERATIONS
 # ============================================================
 
-def find_drive_json(service, filename):
-    escaped = filename.replace("\\", "\\\\").replace("'", "\\'")
+def escape_drive_query(value):
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def find_drive_file(service, folder_id, filename):
+    escaped = escape_drive_query(filename)
 
     query = (
-        f"'{GDRIVE_JSON_FOLDER_ID}' in parents and "
+        f"'{folder_id}' in parents and "
         f"name = '{escaped}' and trashed = false"
     )
 
     result = service.files().list(
         q=query,
-        fields="files(id,name)",
-        pageSize=10
+        fields="files(id,name,mimeType,size)",
+        pageSize=100
     ).execute()
 
     files = result.get("files", [])
@@ -179,7 +187,7 @@ def find_drive_json(service, filename):
     return files[0]
 
 
-def download_drive_json(service, file_id, destination):
+def download_drive_file(service, file_id, destination, label="FILE"):
     destination.parent.mkdir(
         parents=True,
         exist_ok=True
@@ -189,24 +197,51 @@ def download_drive_json(service, file_id, destination):
         fileId=file_id
     )
 
-    with destination.open("wb") as file:
-        downloader = MediaIoBaseDownload(
-            file,
-            request
-        )
+    temp_file = destination.with_suffix(
+        destination.suffix + ".tmp"
+    )
 
-        done = False
+    try:
+        with temp_file.open("wb") as file:
+            downloader = MediaIoBaseDownload(
+                file,
+                request,
+                chunksize=8 * 1024 * 1024
+            )
 
-        while not done:
-            status, done = downloader.next_chunk()
+            done = False
 
-            if status:
-                print(
-                    f"[DRIVE] JSON download: "
-                    f"{int(status.progress() * 100)}%"
-                )
+            while not done:
+                status, done = downloader.next_chunk()
 
+                if status:
+                    print(
+                        f"[DRIVE] {label} download: "
+                        f"{int(status.progress() * 100)}%"
+                    )
+
+        if temp_file.stat().st_size == 0:
+            raise RuntimeError(
+                f"Downloaded {label} is empty: {destination.name}"
+            )
+
+        os.replace(temp_file, destination)
+
+    except Exception:
+        if temp_file.exists():
+            temp_file.unlink()
+        raise
+
+    print(f"[DRIVE] Downloaded: {destination.name}")
     return destination
+
+
+def find_drive_json(service, filename):
+    return find_drive_file(
+        service,
+        GDRIVE_JSON_FOLDER_ID,
+        filename
+    )
 
 
 def get_json_file(channel, video_title, drive):
@@ -218,7 +253,7 @@ def get_json_file(channel, video_title, drive):
     if local_path.exists():
         return local_path
 
-    if ENV != "PROD":
+    if ENV != "PROD" or drive is None:
         raise FileNotFoundError(
             f"JSON result not found: {local_path}"
         )
@@ -235,12 +270,13 @@ def get_json_file(channel, video_title, drive):
             f"Drive JSON not found: {drive_filename}"
         )
 
-    print(f"[DRIVE] Downloading {drive_filename}")
+    print(f"[DRIVE] Downloading JSON: {drive_filename}")
 
-    return download_drive_json(
+    return download_drive_file(
         drive,
         drive_file["id"],
-        local_path
+        local_path,
+        "JSON"
     )
 
 
@@ -261,9 +297,7 @@ def save_json(channel, json_file, data, drive):
     if ENV != "PROD":
         return
 
-    drive_filename = (
-        f"{channel.value}__{json_file.name}"
-    )
+    drive_filename = f"{channel.value}__{json_file.name}"
 
     drive_file = find_drive_json(
         drive,
@@ -286,9 +320,7 @@ def save_json(channel, json_file, data, drive):
         media_body=media
     ).execute()
 
-    print(
-        f"[DRIVE] Updated upload progress: {drive_filename}"
-    )
+    print(f"[DRIVE] Updated JSON: {drive_filename}")
 
 
 # ============================================================
@@ -323,11 +355,7 @@ def load_queue(queue_file):
                 + ", ".join(sorted(required))
             )
 
-        if set(reader.fieldnames) != required:
-            raise ValueError(
-                "Unexpected CSV columns in queue."
-            )
-
+        # Extra columns such as clip_done are allowed and preserved.
         return reader.fieldnames, list(reader)
 
 
@@ -342,7 +370,8 @@ def save_queue(queue_file, fieldnames, rows):
 
         writer = csv.DictWriter(
             file,
-            fieldnames=fieldnames
+            fieldnames=fieldnames,
+            extrasaction="ignore"
         )
 
         writer.writeheader()
@@ -351,6 +380,12 @@ def save_queue(queue_file, fieldnames, rows):
     os.replace(temp_file, queue_file)
 
     print(f"[QUEUE] Saved: {queue_file.name}")
+
+
+def is_true(value):
+    return str(value or "").strip().lower() in {
+        "true", "1", "yes"
+    }
 
 
 # ============================================================
@@ -368,18 +403,15 @@ def load_video_json(channel, video_title, drive):
         "r",
         encoding="utf-8"
     ) as file:
-
         data = json.load(file)
 
     if isinstance(data, list):
         moments = data
-
     elif (
         isinstance(data, dict)
         and isinstance(data.get("moments"), list)
     ):
         moments = data["moments"]
-
     else:
         raise ValueError(
             f"Invalid JSON structure: {json_file}"
@@ -395,19 +427,43 @@ def get_moment_id(moment, index):
         return index
 
 
-def get_clip_path(channel, video_title, index):
+def get_clip_path(channel, video_title, index, drive):
     video_stem = Path(video_title).stem
 
+    # This must match the clip naming convention used by your generator.
+    filename = f"{video_stem}_{index:02d}.mp4"
+
     expected = (
-        CHANNEL_CONFIG[channel]["clips"]
-        / f"{video_stem}_{index:02d}.mp4"
+        CHANNEL_CONFIG[channel]["clips"] / filename
     )
 
-    if expected.exists():
+    if expected.exists() and expected.stat().st_size > 0:
         return expected
 
-    raise FileNotFoundError(
-        f"Clip not found: {expected}"
+    if ENV != "PROD" or drive is None:
+        raise FileNotFoundError(
+            f"Clip not found locally: {expected}"
+        )
+
+    drive_file = find_drive_file(
+        drive,
+        GDRIVE_CLIPS_FOLDER_ID,
+        filename
+    )
+
+    if not drive_file:
+        raise FileNotFoundError(
+            f"Clip not found in Google Drive generated-clips folder: "
+            f"{filename}"
+        )
+
+    print(f"[DRIVE] Downloading MP4: {filename}")
+
+    return download_drive_file(
+        drive,
+        drive_file["id"],
+        expected,
+        "MP4"
     )
 
 
@@ -430,7 +486,6 @@ def clean_tags(*values):
             for item in value:
                 if item:
                     tags.add(str(item).strip())
-
         else:
             tags.update(
                 word.strip("#, ")
@@ -458,22 +513,15 @@ def upload_video(youtube, clip_path, moment):
             f"Missing YouTube title for {clip_path.name}"
         )
 
-    hook = str(
-        moment.get("hook") or ""
-    ).strip()
-
-    reason = str(
-        moment.get("reason") or ""
-    ).strip()
+    hook = str(moment.get("hook") or "").strip()
+    reason = str(moment.get("reason") or "").strip()
 
     description = "\n\n".join(
-        part
-        for part in [
+        part for part in [
             hook,
             reason,
             "#Shorts #ViralShorts"
-        ]
-        if part
+        ] if part
     )
 
     tags = clean_tags(
@@ -509,6 +557,7 @@ def upload_video(youtube, clip_path, moment):
     )
 
     print(f"\n[YOUTUBE] Uploading: {clip_path.name}")
+
     response = None
 
     while response is None:
@@ -549,25 +598,21 @@ def process_video(youtube, drive, channel, row):
     )
 
     if not moments:
-        print(
-            f"[WARNING] No moments found: {video_title}"
-        )
-        return False
+        print(f"[WARNING] No moments found: {video_title}")
+        return "empty"
 
     for index, moment in enumerate(moments, start=1):
-
         if moment.get("posted") is True:
             continue
 
         clip_path = get_clip_path(
             channel,
             video_title,
-            index
+            index,
+            drive
         )
 
-        print(
-            f"\n[UPLOAD] Processing: {clip_path.name}"
-        )
+        print(f"\n[UPLOAD] Processing: {clip_path.name}")
 
         video_id = upload_video(
             youtube,
@@ -580,11 +625,10 @@ def process_video(youtube, drive, channel, row):
                 f"YouTube upload failed: {clip_path.name}"
             )
 
-        # Save successful upload information.
         moment["posted"] = True
         moment["youtube_video_id"] = video_id
 
-        # Persist immediately to Google Drive.
+        # Persist upload status to Drive immediately.
         save_json(
             channel,
             json_path,
@@ -597,18 +641,10 @@ def process_video(youtube, drive, channel, row):
             f"https://www.youtube.com/watch?v={video_id}"
         )
 
-        print(
-            "[INFO] One-clip limit reached. "
-            "Stopping this execution."
-        )
+        return "uploaded"
 
-        return True
-
-    print(
-        f"[SUCCESS] No pending clips for: {video_title}"
-    )
-
-    return True
+    print(f"[SUCCESS] No pending clips for: {video_title}")
+    return "complete"
 
 
 # ============================================================
@@ -643,16 +679,13 @@ def main(channel_name=None):
     try:
         channel = Channel[selected_name.upper()]
     except KeyError:
-        raise ValueError(
-            f"Invalid channel: {selected_name}"
-        )
+        raise ValueError(f"Invalid channel: {selected_name}")
 
     config = CHANNEL_CONFIG[channel]
 
     print("\n" + "=" * 60)
     print("YOUTUBE CLIP UPLOADER")
     print("=" * 60)
-
     print(f"Environment : {ENV}")
     print(f"Channel     : {channel.value}")
     print(f"Privacy     : {PRIVACY_STATUS}")
@@ -660,17 +693,12 @@ def main(channel_name=None):
     print(f"Results     : {config['results']}")
     print(f"Clips       : {config['clips']}")
     print(f"Dry Run     : {args.dry_run}")
-
     print("=" * 60)
 
-    config["results"].mkdir(
-        parents=True,
-        exist_ok=True
-    )
+    config["results"].mkdir(parents=True, exist_ok=True)
+    config["clips"].mkdir(parents=True, exist_ok=True)
 
-    fieldnames, rows = load_queue(
-        config["queue"]
-    )
+    fieldnames, rows = load_queue(config["queue"])
 
     youtube = None
     drive = None
@@ -678,7 +706,6 @@ def main(channel_name=None):
     if not args.dry_run:
         youtube = load_youtube()
         drive = load_drive()
-
     elif ENV == "PROD":
         drive = load_drive()
 
@@ -686,131 +713,116 @@ def main(channel_name=None):
     had_errors = False
 
     for row in rows:
+        video_title = row["video_title"]
 
-        if row["post_done"].strip().lower() == "true":
+        if is_true(row.get("post_done")):
             continue
 
-        if row["json_done"].strip().lower() != "true":
-            print(
-                f"[SKIP] JSON is not ready: "
-                f"{row['video_title']}"
-            )
+        if not is_true(row.get("json_done")):
+            print(f"[SKIP] JSON is not ready: {video_title}")
+            continue
+
+        # If clip_done exists, only process generated clips.
+        if (
+            "clip_done" in row
+            and not is_true(row.get("clip_done"))
+        ):
+            print(f"[SKIP] Clips are not ready: {video_title}")
             continue
 
         try:
-            if args.dry_run:
-                json_file, data, moments = load_video_json(
-                    channel,
-                    row["video_title"],
-                    drive
+            json_file, data, moments = load_video_json(
+                channel,
+                video_title,
+                drive
+            )
+
+            pending = [
+                (index, moment)
+                for index, moment in enumerate(
+                    moments,
+                    start=1
                 )
+                if moment.get("posted") is not True
+            ]
 
-                pending = [
-                    (index, moment)
-                    for index, moment in enumerate(
-                        moments,
-                        start=1
-                    )
-                    if moment.get("posted") is not True
-                ]
-
+            if args.dry_run:
                 print(
-                    f"\n[DRY RUN] {row['video_title']}: "
+                    f"\n[DRY RUN] {video_title}: "
                     f"{len(pending)} pending moments"
                 )
 
                 for index, moment in pending:
                     clip = get_clip_path(
                         channel,
-                        row["video_title"],
-                        index
+                        video_title,
+                        index,
+                        drive
                     )
-
                     print(f"  - {clip.name}")
 
                 continue
 
+            if not pending:
+                row["post_done"] = "true"
+                save_queue(config["queue"], fieldnames, rows)
+                print(f"[SUCCESS] All moments already posted: {video_title}")
+                continue
+
             if uploads_completed >= MAX_UPLOADS_PER_RUN:
-                print(
-                    "[INFO] Maximum upload limit reached."
-                )
+                print("[INFO] Maximum upload limit reached.")
                 break
 
-            completed = process_video(
+            result = process_video(
                 youtube,
                 drive,
                 channel,
                 row
             )
 
-            if completed:
-                json_file, data, moments = load_video_json(
-                    channel,
-                    row["video_title"],
-                    drive
-                )
+            # Reload JSON to verify the saved posting state.
+            json_file, data, moments = load_video_json(
+                channel,
+                video_title,
+                drive
+            )
 
-                all_posted = (
-                    bool(moments)
-                    and all(
-                        moment.get("posted") is True
-                        for moment in moments
-                    )
-                )
-
-                if all_posted:
-                    row["post_done"] = "true"
-
-                    print(
-                        f"[SUCCESS] All clips uploaded: "
-                        f"{row['video_title']}"
-                    )
-                else:
-                    print(
-                        f"[PENDING] More clips remaining: "
-                        f"{row['video_title']}"
-                    )
-
-                save_queue(
-                    config["queue"],
-                    fieldnames,
-                    rows
-                )
-
-                # A successful upload consumes one upload slot.
-                if any(
+            all_posted = (
+                bool(moments)
+                and all(
                     moment.get("posted") is True
                     for moment in moments
-                ):
-                    uploads_completed += 1
+                )
+            )
 
-                if uploads_completed >= MAX_UPLOADS_PER_RUN:
-                    print(
-                        "[INFO] Maximum one-upload limit reached."
-                    )
-                    break
+            if all_posted:
+                row["post_done"] = "true"
+                print(f"[SUCCESS] All clips uploaded: {video_title}")
+            else:
+                print(f"[PENDING] More clips remaining: {video_title}")
+
+            save_queue(config["queue"], fieldnames, rows)
+
+            if result == "uploaded":
+                uploads_completed += 1
+
+            if uploads_completed >= MAX_UPLOADS_PER_RUN:
+                print("[INFO] Maximum one-upload limit reached.")
+                break
 
         except Exception as error:
             had_errors = True
 
             print(
-                f"\n[ERROR] Processing "
-                f"{row['video_title']}: {error}"
+                f"\n[ERROR] Processing {video_title}: {error}"
             )
 
             print(
-                "[WARNING] Check Drive JSON and YouTube "
-                "upload status before retrying."
+                "[WARNING] Check YouTube and Drive status "
+                "before retrying."
             )
 
-            # Save any queue changes already made.
-            save_queue(
-                config["queue"],
-                fieldnames,
-                rows
-            )
-
-            # Stop after an error to avoid unintended uploads.
+            save_queue(config["queue"], fieldnames, rows)
             break
 
     print("\n" + "=" * 60)
