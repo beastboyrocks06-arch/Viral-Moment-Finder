@@ -51,16 +51,35 @@ jobs:
           pip install -r viral-clip-uploader-requirements.txt
 
       - name: Verify uploader configuration
+        shell: bash
+        env:
+          YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
+          YOUTUBE_CHANNEL_VIRAL_REVELATION: ${{ vars.YOUTUBE_CHANNEL_VIRAL_REVELATION }}
+          GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
+          GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
         run: |
-          set -e
-          test -f viral_moment_clip_uploader.py
-          test -f viral_revelation_queue.csv
-          test -d results/viral-revelation
-          test -n "$YOUTUBE_TOKEN_B64"
-          test -n "$YOUTUBE_CHANNEL_VIRAL_REVELATION"
-          test -n "$GDRIVE_TOKEN_JSON"
-          test -n "$GDRIVE_CLIPS_FOLDER_ID"
-          echo "Viral Revelation uploader configuration verified."
+          echo "Checking uploader script..."
+          test -f viral_moment_clip_uploader.py || exit 11
+
+          echo "Checking queue..."
+          test -f viral_revelation_queue.csv || exit 12
+
+          echo "Checking results directory..."
+          test -d results/viral-revelation || exit 13
+
+          echo "Checking YouTube token..."
+          test -n "$YOUTUBE_TOKEN_B64" || exit 14
+
+          echo "Checking YouTube channel ID..."
+          test -n "$YOUTUBE_CHANNEL_VIRAL_REVELATION" || exit 15
+
+          echo "Checking Google Drive token..."
+          test -n "$GDRIVE_TOKEN_JSON" || exit 16
+
+          echo "Checking Google Drive folder..."
+          test -n "$GDRIVE_CLIPS_FOLDER_ID" || exit 17
+
+          echo "All configuration checks passed."
 
       - name: Configure YouTube OAuth
         run: |
