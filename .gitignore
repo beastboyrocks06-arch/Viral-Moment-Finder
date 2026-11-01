@@ -9,3 +9,4 @@ videos/
 clips/
 downloads/
 gdrive-credentials.json
+.env
