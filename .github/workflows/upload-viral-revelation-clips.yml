@@ -69,7 +69,11 @@ jobs:
           python -c "import json; json.load(open('token.json'))"
 
       - name: Upload clips to YouTube
-        run: python viral_moment_clip_uploader.py
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "Starting Viral Revelation uploader..."
+          python -u viral_moment_clip_uploader.py
 
       - name: Commit upload progress
         if: always()
