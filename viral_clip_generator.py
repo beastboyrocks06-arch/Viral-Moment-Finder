@@ -84,7 +84,7 @@ WIDTH, HEIGHT, FPS = 1080, 1920, 30
 
 MIN_DURATION = 30
 MAX_DURATION = 90
-
+MAX_VIDEOS_PER_RUN = 1
 # Revelation finder currently generates 30-60 second moments.
 REVELATION_MIN_DURATION = 30
 REVELATION_MAX_DURATION = 60
@@ -982,8 +982,8 @@ def main(json_file=None, video_file=None):
             service=service
         )
         return
-
-    # Automatic queue processing.
+    
+    # Automatic queue processing: ONE source video per workflow run.
     if not QUEUE_FILE.exists():
         print(f"[ERROR] Queue file not found: {QUEUE_FILE}")
         return
@@ -995,6 +995,8 @@ def main(json_file=None, video_file=None):
     ) as file:
         rows = list(csv.DictReader(file))
 
+    selected_row = None
+
     for row in rows:
         video = (row.get("video_title") or "").strip()
 
@@ -1002,9 +1004,6 @@ def main(json_file=None, video_file=None):
             continue
 
         if (row.get("json_done") or "").strip().lower() != "true":
-            continue
-
-        if (row.get("post_done") or "").strip().lower() == "true":
             continue
 
         json_filename = f"{Path(video).stem}.json"
@@ -1017,27 +1016,49 @@ def main(json_file=None, video_file=None):
             print(f"[SKIP] JSON missing: {json_filename}")
             continue
 
-        print(f"\n[QUEUE] Processing: {video}")
+        # Skip videos whose clips have already been generated.
+        output_prefix = Path(video).stem + "_"
+        existing_clips = list(OUTPUT_DIR.glob(f"{output_prefix}*.mp4"))
 
-        try:
-            process_result(
-                json_path,
-                video_override=video,
-                service=service
-            )
+        expected_moments = load_json(json_path)
+        expected_count = (
+            len(expected_moments.get("moments", []))
+            if isinstance(expected_moments, dict)
+            else 0
+        )
 
-        except KeyboardInterrupt:
-            print("\n[STOP] Interrupted.")
-            break
+        if expected_count > 0 and len(existing_clips) >= expected_count:
+            print(f"[SKIP] Clips already generated: {video}")
+            continue
 
-        except Exception as error:
-            print(f"[ERROR] {video}: {error}")
-            traceback.print_exc()
+        selected_row = row
+        break
+
+    if selected_row is None:
+        print("[QUEUE] No eligible source videos found.")
+        return
+
+    video = selected_row["video_title"].strip()
+    json_filename = f"{Path(video).stem}.json"
+    json_path = RESULTS_DIR / json_filename
+
+    if not json_path.exists():
+        json_path = get_result_json(json_filename, service)
 
     print("\n" + "=" * 60)
-    print("CLIP GENERATION QUEUE FINISHED")
+    print(f"[QUEUE] SELECTED VIDEO: {video}")
+    print("[QUEUE] Processing only this source video.")
     print("=" * 60)
 
+    process_result(
+        json_path,
+        video_override=video,
+        service=service
+    )
+
+    print("\n" + "=" * 60)
+    print(f"[DONE] Finished processing: {video}")
+    print("=" * 60)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
