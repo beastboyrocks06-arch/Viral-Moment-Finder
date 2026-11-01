@@ -34,7 +34,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Hugging Face CLI
+      - name: Install Hugging Face Hub
         if: steps.qwen-cache.outputs.cache-hit != 'true'
         run: |
           python -m pip install --upgrade pip
@@ -42,34 +42,35 @@ jobs:
 
       - name: Download Qwen Model
         if: steps.qwen-cache.outputs.cache-hit != 'true'
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          if [ -z "$HF_TOKEN" ]; then
-            echo "::error::HF_TOKEN secret is missing."
-            exit 1
-          fi
-
           mkdir -p models
 
-          hf download beast2314/viral-moment-qwen-model \
-            qwen2.5-1.5b-instruct-q4_k_m.gguf \
-            --local-dir models \
-            --token "$HF_TOKEN"
+          python - <<'PY'
+          from huggingface_hub import hf_hub_download
+          from pathlib import Path
+
+          model_path = hf_hub_download(
+              repo_id="beast2314/viral-moment-qwen-model",
+              filename="qwen2.5-1.5b-instruct-q4_k_m.gguf",
+              local_dir="models"
+          )
+
+          print(f"Downloaded model: {model_path}")
+          PY
 
       - name: Verify Model
         run: |
           MODEL="models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
 
           if [ ! -s "$MODEL" ]; then
-            echo "::error::Qwen model is missing or empty."
+            echo "::error::Qwen model download failed."
             exit 1
           fi
 
           SIZE=$(stat -c%s "$MODEL")
 
           if [ "$SIZE" -lt 500000000 ]; then
-            echo "::error::Qwen model is incomplete or invalid."
+            echo "::error::Model file is incomplete."
             exit 1
           fi
 
