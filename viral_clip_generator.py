@@ -8,6 +8,7 @@ import random
 import re
 import sys
 import tempfile
+import time
 import traceback
 from pathlib import Path
 
@@ -17,6 +18,8 @@ from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
+from googleapiclient.errors import HttpError
+from httplib2 import HttpLib2Error
 
 from moviepy import (
     VideoFileClip,
@@ -40,7 +43,6 @@ if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 import caption_generator as caption
-
 
 ENV = os.getenv("ENV", "DEV").upper()
 
@@ -114,6 +116,15 @@ def initialize():
     print(f"Output:      {OUTPUT_DIR}")
     print("=" * 60)
 
+    if ENV == "PROD":
+        if not GDRIVE_CLIPS_FOLDER_ID:
+            raise RuntimeError("GDRIVE_CLIPS_FOLDER_ID is missing.")
+
+        if not GDRIVE_SOURCE_FOLDER_ID:
+            print("[WARNING] GDRIVE_SOURCE_FOLDER_ID is not configured.")
+
+        print("[DRIVE] Production upload enabled.")
+
 
 # ============================================================
 # GOOGLE DRIVE
@@ -136,35 +147,72 @@ def get_drive():
     else:
         raise RuntimeError("Google Drive credentials are not configured.")
 
-    return build(
+    service = build(
         "drive",
         "v3",
         credentials=credentials,
         cache_discovery=False
     )
 
+    print("[DRIVE] Google Drive connection initialized.")
+    return service
 
-def find_drive_file(service, folder_id, filename):
-    if not folder_id:
-        raise RuntimeError("Google Drive folder ID is not configured.")
 
+def is_retryable_drive_error(error):
+    if isinstance(error, HttpError):
+        status = error.resp.status
+        return status == 429 or status >= 500
+
+    return isinstance(
+        error,
+        (OSError, HttpLib2Error, ConnectionError, TimeoutError)
+    )
+
+
+def find_drive_file(service, filename, folder_id, max_retries=5):
     escaped_name = filename.replace("\\", "\\\\").replace("'", "\\'")
 
     query = (
-        f"'{folder_id}' in parents and "
-        f"name = '{escaped_name}' and trashed = false"
+        f"name = '{escaped_name}' "
+        f"and '{folder_id}' in parents "
+        "and trashed = false"
     )
 
-    response = service.files().list(
-        q=query,
-        fields="files(id,name,size)",
-        pageSize=10,
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True
-    ).execute()
+    for attempt in range(max_retries):
+        try:
+            response = service.files().list(
+                q=query,
+                spaces="drive",
+                fields="files(id,name,size)",
+                pageSize=10,
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True
+            ).execute(num_retries=2)
 
-    files = response.get("files", [])
-    return files[0] if files else None
+            files = response.get("files", [])
+
+            if files:
+                return files[0]
+
+            return None
+
+        except Exception as error:
+            if not is_retryable_drive_error(error):
+                raise
+
+            if attempt == max_retries - 1:
+                raise
+
+            wait = min(2 ** attempt, 30)
+
+            print(
+                f"[DRIVE][RETRY] Search failed for {filename} "
+                f"({attempt + 1}/{max_retries}): {error}"
+            )
+            print(f"[DRIVE] Retrying search in {wait}s...")
+            time.sleep(wait)
+
+    return None
 
 
 def download_drive_file(service, file_id, destination):
@@ -184,12 +232,19 @@ def download_drive_file(service, file_id, destination):
             done = False
 
             while not done:
-                _, done = downloader.next_chunk()
+                status, done = downloader.next_chunk()
+                if status:
+                    print(
+                        f"[DRIVE][DOWNLOAD] "
+                        f"{int(status.progress() * 100)}%"
+                    )
 
         if not temp_path.exists() or temp_path.stat().st_size == 0:
             raise RuntimeError("Downloaded file is empty.")
 
         temp_path.replace(destination)
+
+        print(f"[DRIVE][SUCCESS] Downloaded: {destination.name}")
         return destination
 
     except Exception:
@@ -198,7 +253,7 @@ def download_drive_file(service, file_id, destination):
         raise
 
 
-def upload_clip_to_drive(service, clip_path):
+def upload_clip_to_drive(service, clip_path, max_retries=5):
     if not GDRIVE_CLIPS_FOLDER_ID:
         raise RuntimeError("GDRIVE_CLIPS_FOLDER_ID is not configured.")
 
@@ -207,79 +262,163 @@ def upload_clip_to_drive(service, clip_path):
     if not clip_path.exists() or clip_path.stat().st_size == 0:
         raise RuntimeError(f"Clip missing or empty: {clip_path.name}")
 
+    filename = clip_path.name
     local_size = clip_path.stat().st_size
 
-    # Avoid duplicate uploads when retrying a partially completed run.
-    existing = find_drive_file(
-        service,
-        GDRIVE_CLIPS_FOLDER_ID,
-        clip_path.name
-    )
+    print("\n" + "=" * 60)
+    print(f"[DRIVE] Processing: {filename}")
+    print(f"[DRIVE] Local size: {local_size:,} bytes")
+    print("=" * 60)
 
-    if existing:
-        drive_size = int(existing.get("size", 0))
+    for attempt in range(max_retries):
+        try:
+            # Check if the file already exists.
+            existing = find_drive_file(
+                service,
+                filename,
+                GDRIVE_CLIPS_FOLDER_ID
+            )
 
-        if drive_size == local_size:
-            print(f"[DRIVE] Already uploaded and verified: {clip_path.name}")
+            if existing:
+                drive_size = int(existing.get("size", 0))
+
+                if drive_size == local_size:
+                    print(f"[DRIVE][SKIP] Already uploaded: {filename}")
+                    print("[DRIVE][VERIFIED] Existing size matches.")
+                    return True
+
+                raise RuntimeError(
+                    f"Drive filename conflict: {filename}. "
+                    f"Local={local_size}, Drive={drive_size}"
+                )
+
+            print(
+                f"[DRIVE][UPLOAD] Uploading {filename} "
+                f"(attempt {attempt + 1}/{max_retries})"
+            )
+
+            media = MediaFileUpload(
+                str(clip_path),
+                mimetype="video/mp4",
+                resumable=True,
+                chunksize=10 * 1024 * 1024
+            )
+
+            uploaded = service.files().create(
+                body={
+                    "name": filename,
+                    "parents": [GDRIVE_CLIPS_FOLDER_ID]
+                },
+                media_body=media,
+                fields="id,name,size",
+                supportsAllDrives=True
+            ).execute(num_retries=3)
+
+            if not uploaded.get("id"):
+                raise RuntimeError(
+                    f"Drive returned no file ID: {filename}"
+                )
+
+            drive_size = int(uploaded.get("size", 0))
+
+            if drive_size != local_size:
+                raise RuntimeError(
+                    f"Upload size mismatch: {filename}. "
+                    f"Local={local_size}, Drive={drive_size}"
+                )
+
+            print(f"[DRIVE][SUCCESS] Uploaded: {filename}")
+            print(f"[DRIVE][VERIFIED] {drive_size:,} bytes")
+            print(f"[DRIVE][ID] {uploaded['id']}")
+
             return True
 
-        raise RuntimeError(
-            f"Drive filename conflict: {clip_path.name}. "
-            f"Local size={local_size}, Drive size={drive_size}. "
-            "Resolve the existing file before retrying."
-        )
+        except RuntimeError:
+            raise
 
-    print(f"[DRIVE] Uploading: {clip_path.name}")
+        except Exception as error:
+            if not is_retryable_drive_error(error):
+                raise
 
-    media = MediaFileUpload(
-        str(clip_path),
-        mimetype="video/mp4",
-        resumable=True
-    )
+            print(f"[DRIVE][WARNING] Upload attempt failed: {error}")
 
-    uploaded = service.files().create(
-        body={
-            "name": clip_path.name,
-            "parents": [GDRIVE_CLIPS_FOLDER_ID]
-        },
-        media_body=media,
-        fields="id,name,size",
-        supportsAllDrives=True
-    ).execute()
+            # The upload may have succeeded even if the response was lost.
+            try:
+                existing = find_drive_file(
+                    service,
+                    filename,
+                    GDRIVE_CLIPS_FOLDER_ID
+                )
 
-    if not uploaded.get("id"):
-        raise RuntimeError(f"Drive upload failed: {clip_path.name}")
+                if existing:
+                    drive_size = int(existing.get("size", 0))
 
-    if int(uploaded.get("size", 0)) != local_size:
-        raise RuntimeError(
-            f"Uploaded file size mismatch: {clip_path.name}"
-        )
+                    if drive_size == local_size:
+                        print(
+                            f"[DRIVE][RECOVERED] Upload completed: "
+                            f"{filename}"
+                        )
+                        return True
 
-    print(f"[DRIVE] Uploaded and verified: {clip_path.name}")
-    return True
+                    raise RuntimeError(
+                        f"Drive filename conflict after interrupted upload: "
+                        f"{filename}. Local={local_size}, Drive={drive_size}"
+                    )
+
+            except RuntimeError:
+                raise
+
+            except Exception as check_error:
+                print(
+                    f"[DRIVE][WARNING] Recovery search failed: "
+                    f"{check_error}"
+                )
+
+            if attempt == max_retries - 1:
+                raise
+
+            wait = min(2 ** attempt, 30)
+
+            print(
+                f"[DRIVE][RETRY] Upload retry "
+                f"{attempt + 1}/{max_retries} in {wait}s"
+            )
+            time.sleep(wait)
+
+    raise RuntimeError(f"Could not upload clip: {filename}")
 
 
 def upload_all_clips(service, clip_paths):
+    """
+    Final verification only.
+    Each clip is uploaded immediately after generation.
+    """
+
     if not clip_paths:
         raise RuntimeError("No clips were generated.")
 
     if not GDRIVE_CLIPS_FOLDER_ID:
         raise RuntimeError("GDRIVE_CLIPS_FOLDER_ID is not configured.")
 
-    for clip_path in clip_paths:
-        upload_clip_to_drive(service, clip_path)
+    print("\n" + "=" * 60)
+    print("[DRIVE] FINAL VERIFICATION")
+    print("=" * 60)
 
-    # Verify every expected file exists and has the correct size.
     for clip_path in clip_paths:
+        clip_path = Path(clip_path)
+
+        if not clip_path.exists() or clip_path.stat().st_size == 0:
+            raise RuntimeError(f"Local clip missing: {clip_path.name}")
+
         drive_file = find_drive_file(
             service,
-            GDRIVE_CLIPS_FOLDER_ID,
-            clip_path.name
+            clip_path.name,
+            GDRIVE_CLIPS_FOLDER_ID
         )
 
         if not drive_file:
             raise RuntimeError(
-                f"Drive verification failed: {clip_path.name}"
+                f"[DRIVE][ERROR] File not found: {clip_path.name}"
             )
 
         local_size = clip_path.stat().st_size
@@ -287,12 +426,20 @@ def upload_all_clips(service, clip_paths):
 
         if local_size != drive_size:
             raise RuntimeError(
-                f"Drive size verification failed: {clip_path.name}"
+                f"[DRIVE][ERROR] Size mismatch: {clip_path.name}. "
+                f"Local={local_size}, Drive={drive_size}"
             )
 
-        print(f"[DRIVE] Verified: {clip_path.name}")
+        print(
+            f"[DRIVE][VERIFIED] {clip_path.name} "
+            f"({drive_size:,} bytes)"
+        )
 
-    print(f"[DRIVE] All {len(clip_paths)} clips verified.")
+    print(
+        f"\n[DRIVE][SUCCESS] All {len(clip_paths)} clips "
+        "verified in Google Drive."
+    )
+
     return True
 
 
@@ -300,6 +447,7 @@ def get_result_json(filename, service=None):
     local_path = RESULTS_DIR / filename
 
     if local_path.exists() and local_path.stat().st_size > 0:
+        print(f"[JSON] Local JSON found: {filename}")
         return local_path
 
     if ENV != "PROD":
@@ -307,15 +455,15 @@ def get_result_json(filename, service=None):
 
     if not service or not GDRIVE_JSON_FOLDER_ID:
         raise RuntimeError(
-            "JSON file is not local and Drive JSON folder is not configured."
+            "JSON is not local and Drive JSON folder is not configured."
         )
 
     drive_filename = f"viral-moment__{filename}"
 
     drive_file = find_drive_file(
         service,
-        GDRIVE_JSON_FOLDER_ID,
-        drive_filename
+        drive_filename,
+        GDRIVE_JSON_FOLDER_ID
     )
 
     if not drive_file:
@@ -362,6 +510,7 @@ def get_source_video(filename, service=None):
     local_path = find_source_video(filename)
 
     if local_path:
+        print(f"[VIDEO] Local source found: {local_path.name}")
         return local_path
 
     if ENV != "PROD":
@@ -376,8 +525,8 @@ def get_source_video(filename, service=None):
 
     drive_file = find_drive_file(
         service,
-        GDRIVE_SOURCE_FOLDER_ID,
-        drive_filename
+        drive_filename,
+        GDRIVE_SOURCE_FOLDER_ID
     )
 
     if not drive_file:
@@ -419,19 +568,6 @@ def load_json(path):
 # ============================================================
 
 def validate_moment(moment, video_duration):
-    """
-    Expected moment structure:
-
-    {
-        "id": "01",
-        "start": 125.5,
-        "end": 170.5,
-        "duration": 45.0,
-        "title": "...",
-        "highlight_words": []
-    }
-    """
-
     if not isinstance(moment, dict):
         print("[SKIP] Moment must be a JSON object.")
         return None
@@ -440,15 +576,15 @@ def validate_moment(moment, video_duration):
         start = float(moment["start"])
         end = float(moment["end"])
     except (KeyError, TypeError, ValueError):
-        print("[SKIP] Moment has invalid start/end timestamps.")
+        print("[SKIP] Invalid start/end timestamps.")
         return None
 
     if not math.isfinite(start) or not math.isfinite(end):
-        print("[SKIP] Moment has non-finite timestamps.")
+        print("[SKIP] Non-finite timestamps.")
         return None
 
     if start < 0 or end <= start:
-        print("[SKIP] Moment has invalid timestamps.")
+        print("[SKIP] Invalid timestamps.")
         return None
 
     if start >= video_duration:
@@ -474,7 +610,6 @@ def get_moment_id(moment, index):
     if not raw_id:
         raw_id = str(index)
 
-    # Keep filenames safe while preserving normal IDs such as 01 or moment_01.
     safe_id = re.sub(r"[^a-zA-Z0-9_-]", "_", raw_id)
 
     return safe_id or str(index)
@@ -528,6 +663,7 @@ def create_captions(audio_path, duration, highlight_words):
                 .with_start(0)
                 .with_duration(duration)
             )
+
             print("[CAPTIONS] Generated successfully.")
 
         return caption_clip
@@ -747,7 +883,6 @@ def generate_clip(
     final = None
     final_audio = None
 
-    segment_clips = []
     sticker_clips = []
     sfx_clips = []
 
@@ -775,7 +910,6 @@ def generate_clip(
     output_path = OUTPUT_DIR / f"{output_name}.mp4"
     temp_output_path = OUTPUT_DIR / f"{output_name}.temp.mp4"
 
-    # Existing non-empty output counts as generated.
     if output_path.exists() and output_path.stat().st_size > 0:
         print(f"[SKIP] Already generated: {output_path.name}")
         return True
@@ -857,7 +991,11 @@ def generate_clip(
 
         temp_output_path.replace(output_path)
 
-        print(f"[SUCCESS] Created: {output_path.name}")
+        print(
+            f"[SUCCESS] Created: {output_path.name} "
+            f"({output_path.stat().st_size:,} bytes)"
+        )
+
         return True
 
     except Exception as error:
@@ -881,7 +1019,6 @@ def generate_clip(
             *sfx_clips,
             vertical,
             moment_clip,
-            *segment_clips,
             source
         ]
 
@@ -954,6 +1091,10 @@ def process_result(json_path, video_override=None, service=None):
 
         expected_files.append(output_path)
 
+        print("\n" + "#" * 60)
+        print(f"[PIPELINE] CLIP {index}/{len(moments)}")
+        print("#" * 60)
+
         success = generate_clip(
             source_path=source_path,
             moment=moment,
@@ -964,13 +1105,39 @@ def process_result(json_path, video_override=None, service=None):
 
         if not success:
             all_successful = False
+            print(f"[ERROR] Generation failed: {output_path.name}")
+            continue
 
-    # Verify every expected MP4 exists and is non-empty.
-    for path in expected_files:
-        if not path.exists() or path.stat().st_size == 0:
-            print(f"[ERROR] Expected clip missing: {path.name}")
+        if not output_path.exists() or output_path.stat().st_size == 0:
             all_successful = False
+            print(f"[ERROR] Output missing: {output_path.name}")
+            continue
 
+        # Upload immediately after each clip is generated.
+        if ENV == "PROD":
+            if not service:
+                all_successful = False
+                print("[ERROR] Google Drive service is unavailable.")
+                continue
+
+            try:
+                upload_clip_to_drive(service, output_path)
+
+            except Exception as error:
+                all_successful = False
+                print(f"[ERROR] Upload failed: {output_path.name}")
+                print(f"[ERROR] {error}")
+                traceback.print_exc()
+                continue
+
+        else:
+            print(
+                f"[DEV] Upload skipped: {output_path.name}"
+            )
+
+        print(f"[PIPELINE] Completed clip {index}/{len(moments)}")
+
+    # Check all local clips.
     generated = sum(
         1 for path in expected_files
         if path.exists() and path.stat().st_size > 0
@@ -1031,10 +1198,9 @@ def update_clip_done(video_filename):
 
     if not updated:
         raise RuntimeError(
-            f"Could not find video in CSV to update: {video_filename}"
+            f"Could not find video in CSV: {video_filename}"
         )
 
-    # Write atomically to avoid leaving a partially written CSV.
     temp_path = QUEUE_FILE.with_suffix(".tmp")
 
     with temp_path.open(
@@ -1047,12 +1213,13 @@ def update_clip_done(video_filename):
             fieldnames=fieldnames,
             extrasaction="ignore"
         )
+
         writer.writeheader()
         writer.writerows(rows)
 
     temp_path.replace(QUEUE_FILE)
 
-    print(f"[QUEUE] clip_done=true saved for: {video_filename}")
+    print(f"[QUEUE][SUCCESS] clip_done=true: {video_filename}")
 
 
 def select_next_video(rows, service):
@@ -1110,9 +1277,8 @@ def main(json_file=None, video_file=None):
     service = get_drive() if ENV == "PROD" else None
 
     # --------------------------------------------------------
-    # Manual single-JSON processing
+    # Manual JSON processing
     # --------------------------------------------------------
-    # Manual mode does not update the queue's clip_done column.
 
     if json_file:
         json_path = resolve_json_path(json_file)
@@ -1133,11 +1299,14 @@ def main(json_file=None, video_file=None):
         )
 
         if not success:
-            raise RuntimeError("One or more clips failed to generate.")
+            raise RuntimeError(
+                "Generation or immediate Drive upload failed."
+            )
 
         if ENV == "PROD":
             upload_all_clips(service, expected_files)
 
+        print("[SUCCESS] Manual processing completed.")
         return
 
     # --------------------------------------------------------
@@ -1165,21 +1334,22 @@ def main(json_file=None, video_file=None):
 
     if not success:
         raise RuntimeError(
-            f"Clip generation incomplete for {video}. "
+            f"Processing incomplete for {video}. "
             "clip_done remains false."
         )
 
-    # Production: upload and verify every MP4 first.
     if ENV == "PROD":
+        # This verifies only. Uploads have already happened individually.
         upload_all_clips(service, expected_files)
+
     else:
         print(
             "[DEV] Clips generated locally. "
-            "Drive upload and clip_done update are skipped."
+            "Drive upload and queue update skipped."
         )
         return
 
-    # Update CSV only after successful generation AND Drive verification.
+    # Update CSV only after all Drive files have been verified.
     update_clip_done(video)
 
     print("\n" + "=" * 60)
