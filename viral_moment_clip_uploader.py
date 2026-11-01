@@ -235,16 +235,12 @@ def save_json(json_path, data):
 # ============================================================
 # QUEUE OPERATIONS
 # ============================================================
-
 def load_queue(queue_file):
     if not queue_file.exists():
         raise FileNotFoundError(f"Queue file not found: {queue_file}")
 
-    with queue_file.open(
-        "r", encoding="utf-8-sig", newline=""
-    ) as file:
+    with queue_file.open("r", encoding="utf-8-sig", newline="") as file:
         reader = csv.DictReader(file)
-
         required = {"video_title", "json_done", "post_done"}
 
         if not reader.fieldnames or not required.issubset(reader.fieldnames):
@@ -254,17 +250,26 @@ def load_queue(queue_file):
 
         return reader.fieldnames, list(reader)
 
-
 def save_queue(queue_path, fieldnames, rows):
-    with open(queue_path, "w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(
-            file,
-            fieldnames=fieldnames,
-            extrasaction="ignore",
-            quoting=csv.QUOTE_MINIMAL
-        )
-        writer.writeheader()
-        writer.writerows(rows)
+    temp_path = queue_path.with_suffix(queue_path.suffix + ".tmp")
+
+    try:
+        with temp_path.open("w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(
+                file,
+                fieldnames=fieldnames,
+                extrasaction="ignore",
+                quoting=csv.QUOTE_MINIMAL
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+
+        os.replace(temp_path, queue_path)
+
+    except Exception:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise
 
     print(f"[QUEUE] Saved: {queue_path}")
 
