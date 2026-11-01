@@ -69,17 +69,6 @@ jobs:
           if_no_artifact_found: warn
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download Documentary Moment clips
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: viral-moment-clip-generator.yml
-          workflow_conclusion: success
-          name: DOCUMENTARY_MOMENT-generated-clips
-          path: clips/documentary-moment
-          branch: main
-          if_no_artifact_found: warn
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
       # --------------------------------------------------
       # YOUTUBE OAUTH
       # --------------------------------------------------
@@ -104,16 +93,11 @@ jobs:
         run: |
           test -f viral_moment_clip_uploader.py
           test -f viral_moment_queue.csv
-          test -f viral_documentary_queue.csv
           test -f token.json
 
-          mkdir -p clips/viral-moment clips/documentary-moment
-
+          mkdir -p clips/viral-moment
           echo "Viral Moment clips:"
           find clips/viral-moment -maxdepth 1 -type f -name "*.mp4" -printf "%f\n"
-
-          echo "Documentary Moment clips:"
-          find clips/documentary-moment -maxdepth 1 -type f -name "*.mp4" -printf "%f\n"
 
       # --------------------------------------------------
       # GOOGLE DRIVE OAUTH VALIDATION
@@ -149,19 +133,6 @@ jobs:
           python viral_moment_clip_uploader.py
 
       # --------------------------------------------------
-      # UPLOAD DOCUMENTARY MOMENT
-      # --------------------------------------------------
-      - name: Upload Documentary Moment videos
-        env:
-          ENV: PROD
-          CHANNEL: DOCUMENTARY_MOMENT
-          GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
-          GDRIVE_JSON_FOLDER_ID: ${{ secrets.GDRIVE_JSON_FOLDER_ID }}
-          YOUTUBE_PRIVACY_STATUS: private
-        run: |
-          python viral_moment_clip_uploader.py
-
-      # --------------------------------------------------
       # SAVE QUEUE PROGRESS
       # --------------------------------------------------
       - name: Save upload progress
@@ -170,7 +141,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add viral_moment_queue.csv viral_documentary_queue.csv
+          git add viral_moment_queue.csv
 
           if git diff --cached --quiet; then
             echo "No queue progress changes to save."
