@@ -10,7 +10,7 @@
   ],
   "moments": [
     {
-      "moment_id": "moment_01",
+      "id": "01",
       "title": "He Revealed Something Nobody Expected! 😳",
       "reason": "An unexpected revelation makes this conversation surprising and engaging.",
       "hook": "I never told anyone this before...",
@@ -34,7 +34,7 @@
       ]
     },
     {
-      "moment_id": "moment_02",
+      "id": "02",
       "title": "The Shocking Truth About Nazi Descendants",
       "reason": "Joe reveals a shocking revelation about isolated German-only communities in South America, which challenges viewers' understanding of Nazi history.",
       "hook": "I never told anyone this before...",
