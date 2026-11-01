@@ -24,9 +24,10 @@
       },
       "highlight_words": [],
       "duration": 45.0,
-      "posted": false,
+      "posted": true,
       "start": 125.5,
-          "end": 170.5
+      "end": 170.5,
+      "youtube_video_id": "cIjaa8TvPK0"
     },
     {
       "id": "02",
@@ -47,8 +48,7 @@
       "duration": 30.0,
       "posted": false,
       "start": 375.5,
-          "end": 405.5
-     
+      "end": 405.5
     }
   ]
 }
