@@ -45,19 +45,19 @@ CHANNEL_CONFIG = {
         "queue": BASE_DIR / "viral_moment_queue.csv",
         "results": BASE_DIR / "results" / "viral-moment",
         "clips": BASE_DIR / "clips" / "viral-moment",
-        "youtube_channel_id": os.getenv("YOUTUBE_CHANNEL_VIRAL_MOMENT")
+        "youtube_channel_id": "UChapHrYvYD-FqrKUALrDZbw"
     },
     Channel.DOCUMENTARY_MOMENT: {
         "queue": BASE_DIR / "viral_documentary_queue.csv",
         "results": BASE_DIR / "results" / "documentary-moment",
         "clips": BASE_DIR / "clips" / "documentary-moment",
-        "youtube_channel_id": os.getenv("YOUTUBE_CHANNEL_DOCUMENTARY_MOMENT")
+        "youtube_channel_id": "abc"
     },
     Channel.VIRAL_REVELATION: {
         "queue": BASE_DIR / "viral_revelation_queue.csv",
         "results": BASE_DIR / "results" / "viral-revelation",
         "clips": BASE_DIR / "clips" / "viral-revelation",
-        "youtube_channel_id": os.getenv("YOUTUBE_CHANNEL_VIRAL_REVELATION")
+        "youtube_channel_id": "UCVT52FrZXKx1Zl7nFSkELwA"
     },
 }
 

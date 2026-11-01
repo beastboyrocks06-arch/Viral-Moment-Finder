@@ -29,7 +29,6 @@ jobs:
       YOUTUBE_PRIVACY_STATUS: public
       YOUTUBE_CATEGORY_ID: "24"
       YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
-      YOUTUBE_CHANNEL_VIRAL_REVELATION: ${{ vars.YOUTUBE_CHANNEL_VIRAL_REVELATION }}
       GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
       GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
 
@@ -79,14 +78,6 @@ jobs:
 
           echo "Checking YouTube token..."
           test -n "$YOUTUBE_TOKEN_B64"
-
-          echo "Checking YouTube Channel ID..."
-          if [ -z "$YOUTUBE_CHANNEL_VIRAL_REVELATION" ]; then
-            echo "::error::YOUTUBE_CHANNEL_VIRAL_REVELATION is empty or unavailable."
-            exit 1
-          fi
-
-          echo "Channel ID variable received. Length: ${#YOUTUBE_CHANNEL_VIRAL_REVELATION}"
 
           echo "Checking Google Drive token..."
           test -n "$GDRIVE_TOKEN_JSON"
