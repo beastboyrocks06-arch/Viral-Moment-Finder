@@ -119,11 +119,14 @@ jobs:
           ENV: PROD
           CHANNEL: VIRAL_MOMENT
           MAX_UPLOADS_PER_RUN: "1"
+          YOUTUBE_PRIVACY_STATUS: public
+          YOUTUBE_CATEGORY_ID: "24"
+          YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
           GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
           GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
-          YOUTUBE_CHANNEL_VIRAL_REVELATION: ${{ vars.YOUTUBE_CHANNEL_VIRAL_REVELATION }}
-          YOUTUBE_PRIVACY_STATUS: public
         run: |
+          set -e
+          printf '%s' "$YOUTUBE_TOKEN_B64" | base64 --decode > token.json
           python viral_moment_clip_uploader.py
 
       # --------------------------------------------------

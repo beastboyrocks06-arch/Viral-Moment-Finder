@@ -4,11 +4,12 @@ from pathlib import Path
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 BASE_DIR = Path(__file__).resolve().parent
-CLIENT_FILE = BASE_DIR / "credentials.json"
+CLIENT_FILE = BASE_DIR / "youtube_credentials.json"
 TOKEN_FILE = BASE_DIR / "token.json"
-
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
-
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.readonly"
+]
 def authorize():
     if not CLIENT_FILE.exists():
         raise FileNotFoundError(f"Missing OAuth credentials: {CLIENT_FILE}")
@@ -20,10 +21,10 @@ def authorize():
 
     credentials = flow.run_local_server(
         host="localhost",
-        port=8080,
+        port=0,
+        open_browser=True,
         access_type="offline",
-        prompt="consent",
-        open_browser=True
+        prompt="consent"
     )
 
     if not credentials.refresh_token:

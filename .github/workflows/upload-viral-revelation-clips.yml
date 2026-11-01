@@ -68,7 +68,7 @@ jobs:
           set -euo pipefail
 
           echo "Checking uploader script..."
-          test -f viral_moment_clip_uploader.py
+          test -f viral_revelation_clip_uploader.py
 
           echo "Checking queue..."
           test -f viral_revelation_queue.csv
@@ -110,7 +110,7 @@ jobs:
           set -euo pipefail
 
           echo "Starting Viral Revelation uploader..."
-          python -u viral_moment_clip_uploader.py
+          python -u viral_revelation_clip_uploader.py
 
       # --------------------------------------------------
       # SAVE PROGRESS
