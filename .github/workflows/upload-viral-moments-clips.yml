@@ -56,20 +56,6 @@ jobs:
           pip install -r viral-clip-uploader-requirements.txt
 
       # --------------------------------------------------
-      # DOWNLOAD GENERATED CLIP ARTIFACTS
-      # --------------------------------------------------
-      - name: Download Viral Moment clips
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: viral-moment-clip-generator.yml
-          workflow_conclusion: success
-          name: VIRAL_MOMENT-generated-clips
-          path: clips/viral-moment
-          branch: main
-          if_no_artifact_found: warn
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      # --------------------------------------------------
       # YOUTUBE OAUTH
       # --------------------------------------------------
       - name: Configure YouTube OAuth
