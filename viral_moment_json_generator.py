@@ -186,7 +186,6 @@ def process_queue():
         print(f"\n[QUEUE] Starting video: {video_title}", flush=True)
         video_path = get_video(video_title, service)  
         json_path = CHANNEL_RESULTS / f"{Path(video_title).stem}.json"
-        drive_name = f"{CHANNEL.value}__{json_path.name}"
 
         print(f"\n{'=' * 50}\nProcessing: {video_title}\n{'=' * 50}")
 
@@ -195,14 +194,6 @@ def process_queue():
             continue
 
         try:
-            if ENV == "PROD":
-                folder_id = os.getenv("GDRIVE_JSON_FOLDER_ID")
-                if not folder_id:
-                    raise ValueError("GDRIVE_JSON_FOLDER_ID is missing")
-                existing = find_drive_file(service, folder_id, drive_name)
-                if existing:
-                    download_drive_file(service, existing[0]["id"], json_path)
-
             if valid_json(json_path):
                 print(f"[JSON] Valid local JSON already exists: {json_path.name}")
             else:
