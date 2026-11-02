@@ -130,7 +130,7 @@
     {
       "id": "07",
       "start": 600.0,
-      "posted": false,
+      "posted": true,
       "end": 650.0,
       "duration": 50.0,
       "title": "Faster Than a Lamborghini? Insane Speed & Range Test",
@@ -146,7 +146,8 @@
       },
       "highlight_words": [
         "NEVER"
-      ]
+      ],
+      "youtube_video_id": "NXpeg2wkPzs"
     },
     {
       "id": "08",
