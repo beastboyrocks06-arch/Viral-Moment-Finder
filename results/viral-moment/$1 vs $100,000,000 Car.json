@@ -111,7 +111,7 @@
       "id": "06",
       "start": 550.0,
       "end": 600.0,
-      "posted": false,
+      "posted": true,
       "duration": 50.0,
       "title": "Listen to the Most Incredible Engine Roar",
       "reason": "The car's engine is described, creating a memorable sound.",
@@ -124,7 +124,8 @@
         "clarity": 13,
         "shorts_potential": 13
       },
-      "highlight_words": []
+      "highlight_words": [],
+      "youtube_video_id": "1g5uxW3LJdA"
     },
     {
       "id": "07",
