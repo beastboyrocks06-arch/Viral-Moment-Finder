@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: viral-clip-generator-requirements.txt
+          cache-dependency-path: viral-clip-generate-requirements.txt
 
       - name: Install FFmpeg
         run: |
@@ -46,7 +46,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r viral-clip-generator-requirements.txt
+          pip install -r viral-clip-generate-requirements.txt
 
       - name: Verify required files
         run: |
