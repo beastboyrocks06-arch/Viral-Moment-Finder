@@ -20,7 +20,7 @@ jobs:
 
     env:
       ENV: PROD
-      CHANNEL: VIRAL_MOMENT
+      CHANNEL: VIRAL_REVELATION
       MAX_UPLOADS_PER_RUN: "1"
       YOUTUBE_PRIVACY_STATUS: public
       YOUTUBE_CATEGORY_ID: "24"
