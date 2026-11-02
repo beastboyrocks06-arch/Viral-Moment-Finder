@@ -96,6 +96,16 @@ jobs:
             exit 1
           fi
 
+          if [ -z "$GDRIVE_SOURCE_FOLDER_ID" ]; then
+            echo "::error::GDRIVE_SOURCE_FOLDER_ID secret is missing."
+            exit 1
+          fi
+
+          if [ -z "$GDRIVE_JSON_FOLDER_ID" ]; then
+            echo "::error::GDRIVE_JSON_FOLDER_ID secret is missing."
+            exit 1
+          fi
+
           if [ -z "$GDRIVE_CLIPS_FOLDER_ID" ]; then
             echo "::error::GDRIVE_CLIPS_FOLDER_ID secret is missing."
             exit 1
