@@ -100,6 +100,8 @@ jobs:
         if: always()
         shell: bash
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -110,7 +112,11 @@ jobs:
             echo "No upload progress changes to save."
           else
             git commit -m "Update Viral Moment upload progress"
-            git pull --rebase origin main
+
+            echo "Syncing with remote main..."
+            git pull --rebase --autostash origin main
+
+            echo "Pushing upload progress..."
             git push origin HEAD:main
           fi
 

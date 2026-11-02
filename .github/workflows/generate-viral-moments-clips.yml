@@ -10,7 +10,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: viral-moment-clip-generator
+  group: viral-moment-clip-generate
   cancel-in-progress: false
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: viral-clip-generator-requirements.txt
+          cache-dependency-path: viral-clip-generate-requirements.txt
 
       # --------------------------------------------------
       # INSTALL FFMPEG
@@ -63,7 +63,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r viral-clip-generator-requirements.txt
+          pip install -r viral-clip-generate-requirements.txt
 
       # --------------------------------------------------
       # VERIFY REQUIRED FILES
@@ -76,7 +76,7 @@ jobs:
           test -f viral_clip_generator.py
           test -f caption_generator.py
           test -d sticker
-          test -f viral-clip-generator-requirements.txt
+          test -f viral-clip-generate-requirements.txt
           test -f viral_moment_queue.csv
 
           echo "Required files verified."

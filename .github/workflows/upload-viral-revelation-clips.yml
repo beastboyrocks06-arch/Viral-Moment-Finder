@@ -2,8 +2,8 @@ name: Viral Revelation YouTube Uploader
 
 on:
   schedule:
-    - cron: "30 2 * * *"  # 8:00 AM IST
-    - cron: "30 14 * * *" # 8:00 PM IST
+    - cron: "50 2 * * *"  # 8:20 AM IST
+    - cron: "50 14 * * *" # 8:20 PM IST
   workflow_dispatch:
 
 permissions:
@@ -87,21 +87,28 @@ jobs:
 
           python -u viral_moment_clip_uploader.py --channel VIRAL_REVELATION
 
-      # COMMIT PROGRESS
-      - name: Commit upload progress
+      # SAVE QUEUE AND LOCAL JSON PROGRESS
+      - name: Save upload progress
         if: always()
         shell: bash
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add viral_revelation_queue.csv results/viral-revelation/
+          git add viral_revelation_queue.csv
+          git add results/viral-revelation/
 
           if git diff --cached --quiet; then
-            echo "No upload progress changes to commit."
+            echo "No upload progress changes to save."
           else
             git commit -m "Update Viral Revelation upload progress"
-            git pull --rebase origin main
+
+            echo "Syncing with remote main..."
+            git pull --rebase --autostash origin main
+
+            echo "Pushing upload progress..."
             git push origin HEAD:main
           fi
 
