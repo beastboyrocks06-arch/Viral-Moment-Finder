@@ -10,9 +10,9 @@ on:
         description: "Select the channel"
         required: true
         type: choice
-        default: REVELATION_MOMENT
+        default: VIRAL_REVELATION
         options:
-          - REVELATION_MOMENT
+          - VIRAL_REVELATION
 
 permissions:
   contents: write
@@ -28,7 +28,7 @@ jobs:
 
     env:
       ENV: PROD
-      CHANNEL: ${{ github.event.inputs.channel || 'REVELATION_MOMENT' }}
+      CHANNEL: ${{ github.event.inputs.channel || 'VIRAL_REVELATION' }}
 
     steps:
       # --------------------------------------------------
@@ -188,7 +188,7 @@ jobs:
       - name: Generate Revelation JSON files
         env:
           ENV: PROD
-          CHANNEL: ${{ github.event.inputs.channel || 'REVELATION_MOMENT' }}
+          CHANNEL: ${{ github.event.inputs.channel || 'VIRAL_REVELATION' }}
           HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
 
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}

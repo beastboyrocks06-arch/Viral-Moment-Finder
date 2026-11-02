@@ -1,4 +1,3 @@
-
 name: Viral Revelation YouTube Uploader
 
 on:
@@ -21,12 +20,12 @@ jobs:
 
     env:
       ENV: PROD
-      CHANNEL: VIRAL_REVELATION
+      CHANNEL: VIRAL_MOMENT
       MAX_UPLOADS_PER_RUN: "1"
       YOUTUBE_PRIVACY_STATUS: public
       YOUTUBE_CATEGORY_ID: "24"
-      YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
       GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
+      GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
 
     steps:
       # CHECKOUT
@@ -64,8 +63,10 @@ jobs:
           echo "Checking results directory..."
           test -d results/viral-revelation
 
-          echo "Checking YouTube token..."
-          test -n "$YOUTUBE_TOKEN_B64"
+          echo "Checking YouTube token file..."
+          test -f viral_revelation_token.json
+
+          python -c "import json; json.load(open('viral_revelation_token.json', encoding='utf-8'))"
 
           echo "Checking Google Drive token..."
           test -n "$GDRIVE_TOKEN_JSON"
@@ -75,18 +76,6 @@ jobs:
 
           echo "Configuration checks passed."
 
-      # CONFIGURE YOUTUBE OAUTH
-      - name: Configure YouTube OAuth
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          printf '%s' "$YOUTUBE_TOKEN_B64" | base64 --decode > token.json
-
-          python -c "import json; json.load(open('token.json', encoding='utf-8'))"
-
-          echo "YouTube OAuth configured."
-
       # UPLOAD CLIPS
       - name: Upload Viral Revelation clips
         shell: bash
@@ -94,7 +83,9 @@ jobs:
           set -euo pipefail
 
           echo "Starting Viral Revelation uploader..."
-          python -u viral_moment_clip_uploader.py
+          echo "Channel: $CHANNEL"
+
+          python -u viral_moment_clip_uploader.py --channel VIRAL_REVELATION
 
       # COMMIT PROGRESS
       - name: Commit upload progress
@@ -117,4 +108,6 @@ jobs:
       # CLEANUP
       - name: Cleanup OAuth files
         if: always()
-        run: rm -f token.json
+        run: |
+          rm -f viral_revelation_token.json
+          echo "OAuth cleanup completed."

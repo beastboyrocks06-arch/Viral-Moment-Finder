@@ -1,4 +1,3 @@
-
 name: Viral Moment Clip Uploader
 
 on:
@@ -11,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: youtube-scheduled-upload
+  group: viral-moment-uploader
   cancel-in-progress: false
 
 jobs:
@@ -19,18 +18,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
+    env:
+      ENV: PROD
+      CHANNEL: VIRAL_MOMENT
+      MAX_UPLOADS_PER_RUN: "1"
+      YOUTUBE_PRIVACY_STATUS: public
+      YOUTUBE_CATEGORY_ID: "24"
+      GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
+      GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
+
     steps:
-      # --------------------------------------------------
       # CHECKOUT
-      # --------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # --------------------------------------------------
       # PYTHON SETUP
-      # --------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -38,102 +42,63 @@ jobs:
           cache: pip
           cache-dependency-path: viral-clip-uploader-requirements.txt
 
-      # --------------------------------------------------
       # INSTALL DEPENDENCIES
-      # --------------------------------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r viral-clip-uploader-requirements.txt
 
-      # --------------------------------------------------
-      # VERIFY PROJECT FILES
-      # --------------------------------------------------
-      - name: Verify uploader files
+      # VERIFY PROJECT FILES AND OAUTH
+      - name: Verify uploader configuration
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
+          echo "Checking uploader script..."
           test -f viral_moment_clip_uploader.py
+
+          echo "Checking queue..."
           test -f viral_moment_queue.csv
+
           test -f viral-clip-uploader-requirements.txt
 
           mkdir -p clips/viral-moment
           mkdir -p results/viral-moment
 
-          echo "Uploader files verified."
+          echo "Checking repository YouTube token..."
+          test -f viral_moment_token.json
+
+          python -c "import json; json.load(open('viral_moment_token.json', encoding='utf-8'))"
+
+          echo "Checking Google Drive token..."
+          test -n "$GDRIVE_TOKEN_JSON"
+
+          echo "Checking Google Drive clips folder..."
+          test -n "$GDRIVE_CLIPS_FOLDER_ID"
+
+          echo "Checking selected channel..."
+          test "$CHANNEL" = "VIRAL_MOMENT"
 
           echo "Queue columns:"
           head -n 1 viral_moment_queue.csv
 
-          echo "Queue preview:"
-          head -n 5 viral_moment_queue.csv
+          echo "Configuration checks passed."
 
-      # --------------------------------------------------
-      # YOUTUBE OAUTH
-      # --------------------------------------------------
-      - name: Configure YouTube OAuth
-        env:
-          YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
-        run: |
-          set -e
-
-          if [ -z "$YOUTUBE_TOKEN_B64" ]; then
-            echo "YouTube token secret is missing."
-            exit 1
-          fi
-
-          printf '%s' "$YOUTUBE_TOKEN_B64" | base64 --decode > token.json
-
-          python -c "import json; json.load(open('token.json'))"
-
-          echo "YouTube OAuth token configured."
-
-      # --------------------------------------------------
-      # GOOGLE DRIVE OAUTH VALIDATION
-      # Drive is used ONLY for MP4 downloads.
-      # --------------------------------------------------
-      - name: Verify Google Drive OAuth configuration
-        env:
-          GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
-          GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
-        run: |
-          set -e
-
-          if [ -z "$GDRIVE_TOKEN_JSON" ]; then
-            echo "Google Drive OAuth token is missing."
-            exit 1
-          fi
-
-          if [ -z "$GDRIVE_CLIPS_FOLDER_ID" ]; then
-            echo "Google Drive generated-clips folder ID is missing."
-            exit 1
-          fi
-
-          echo "Google Drive OAuth configuration found."
-
-      # --------------------------------------------------
       # UPLOAD VIRAL MOMENT
-      # --------------------------------------------------
       - name: Upload Viral Moment videos
-        env:
-          ENV: PROD
-          CHANNEL: VIRAL_MOMENT
-          MAX_UPLOADS_PER_RUN: "1"
-          YOUTUBE_PRIVACY_STATUS: public
-          YOUTUBE_CATEGORY_ID: "24"
-          YOUTUBE_TOKEN_B64: ${{ secrets.YOUTUBE_TOKEN_B64 }}
-          GDRIVE_TOKEN_JSON: ${{ secrets.GDRIVE_TOKEN_JSON }}
-          GDRIVE_CLIPS_FOLDER_ID: ${{ secrets.GDRIVE_CLIPS_FOLDER_ID }}
+        shell: bash
         run: |
-          set -e
-          printf '%s' "$YOUTUBE_TOKEN_B64" | base64 --decode > token.json
-          python viral_moment_clip_uploader.py
+          set -euo pipefail
 
-      # --------------------------------------------------
+          echo "Starting Viral Moment uploader..."
+          echo "Channel: $CHANNEL"
+
+          python -u viral_moment_clip_uploader.py --channel VIRAL_MOMENT
+
       # SAVE QUEUE AND LOCAL JSON PROGRESS
-      # --------------------------------------------------
       - name: Save upload progress
         if: always()
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -144,15 +109,14 @@ jobs:
           if git diff --cached --quiet; then
             echo "No upload progress changes to save."
           else
-            git commit -m "Update YouTube upload progress"
-            git push
+            git commit -m "Update Viral Moment upload progress"
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi
 
-      # --------------------------------------------------
       # CLEANUP
-      # --------------------------------------------------
       - name: Cleanup OAuth files
         if: always()
         run: |
-          rm -f token.json
+          rm -f viral_moment_token.json
           echo "OAuth cleanup completed."

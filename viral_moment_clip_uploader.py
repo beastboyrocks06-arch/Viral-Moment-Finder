@@ -19,7 +19,7 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
-TOKEN_FILE = BASE_DIR / "token.json"
+TOKEN_FILE = BASE_DIR / "viral_moment_token.json"
 
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
@@ -38,27 +38,32 @@ class Channel(Enum):
     VIRAL_MOMENT = "viral-moment"
     DOCUMENTARY_MOMENT = "documentary-moment"
     VIRAL_REVELATION = "viral-revelation"
+
 CHANNEL_CONFIG = {
     Channel.VIRAL_MOMENT: {
         "queue": BASE_DIR / "viral_moment_queue.csv",
         "results": BASE_DIR / "results" / "viral-moment",
         "clips": BASE_DIR / "clips" / "viral-moment",
         "youtube_channel_id": "UChapHrYvYD-FqrKUALrDZbw",
-                "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX"
+        "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX",
+        "token_file": "viral_moment_token.json"
     },
     Channel.DOCUMENTARY_MOMENT: {
         "queue": BASE_DIR / "viral_documentary_queue.csv",
         "results": BASE_DIR / "results" / "documentary-moment",
         "clips": BASE_DIR / "clips" / "documentary-moment",
         "youtube_channel_id": "abc",
-                "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX"
+        "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX",
+        "token_file": "documentary_moment_token.json"
+
     },
     Channel.VIRAL_REVELATION: {
         "queue": BASE_DIR / "viral_revelation_queue.csv",
         "results": BASE_DIR / "results" / "viral-revelation",
         "clips": BASE_DIR / "clips" / "viral-revelation",
         "youtube_channel_id": "UCVT52FrZXKx1Zl7nFSkELwA",
-        "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX"
+        "gdrive_clips_folder_id": "1iWBO5UHo4E2dx0HqJ2uBVX8B1i7L5zBX",
+        "token_file": "viral_revelation_token.json"
     },
 }
 
@@ -67,19 +72,19 @@ CHANNEL_CONFIG = {
 # GOOGLE SERVICES
 # ============================================================
 
-def load_youtube():
-    if not TOKEN_FILE.exists():
-        raise FileNotFoundError(f"YouTube token not found: {TOKEN_FILE}")
+def load_youtube(token_file):
+    if not token_file.exists():
+        raise FileNotFoundError(f"YouTube token not found: {token_file}")
 
     credentials = Credentials.from_authorized_user_file(
-        str(TOKEN_FILE), SCOPES
+        str(token_file), SCOPES
     )
 
     if not credentials.valid:
         if credentials.expired and credentials.refresh_token:
             print("[YOUTUBE] Refreshing OAuth token...")
             credentials.refresh(Request())
-            TOKEN_FILE.write_text(credentials.to_json(), encoding="utf-8")
+            token_file.write_text(credentials.to_json(), encoding="utf-8")
             print("[YOUTUBE] OAuth token refreshed.")
         else:
             raise RuntimeError(
@@ -556,6 +561,7 @@ def main(channel_name=None):
     print(f"Queue       : {config['queue']}")
     print(f"Results     : {config['results']}")
     print(f"Clips       : {config['clips']}")
+    print(f"Token File  : {config['token_file']}")
     print(f"Dry Run     : {args.dry_run}")
     print("=" * 60)
 
@@ -563,12 +569,12 @@ def main(channel_name=None):
     config["clips"].mkdir(parents=True, exist_ok=True)
 
     fieldnames, rows = load_queue(config["queue"])
-
+    TOKEN_FILE = BASE_DIR / config["token_file"]
     youtube = None
     drive = None
 
     if not args.dry_run:
-        youtube = load_youtube()
+        youtube = load_youtube(TOKEN_FILE)
 
         verify_youtube_channel(
             youtube,
