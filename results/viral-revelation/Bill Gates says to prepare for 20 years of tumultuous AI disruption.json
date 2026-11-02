@@ -1,0 +1,368 @@
+{
+  "video": "Bill Gates says to prepare for 20 years of tumultuous AI disruption.mkv",
+  "channel": "VIRAL_REVELATION",
+  "video_type": "GENERAL",
+  "video_duration": 4263.4,
+  "total_moments": 14,
+  "highlight_words": [
+    "NEVER",
+    "AI",
+    "GOVERNMENT",
+    "CONSCIOUSNESS",
+    "SOCIETY",
+    "GAIN",
+    "FUNCTION",
+    "RESEARCH",
+    "INDUCED",
+    "COVID",
+    "MUSTAFA",
+    "SOLOMON",
+    "ALIGNMENT",
+    "CONTROL",
+    "SECURITY",
+    "DEMOCRACY",
+    "JOBS",
+    "ABUNDANCE",
+    "HUMANITY",
+    "DIGITAL",
+    "CURE",
+    "HEALTHCARE",
+    "DISCOVERY",
+    "DELIVERY",
+    "PRIORITIZING",
+    "HELPING",
+    "GATES",
+    "SAFETY",
+    "SERIOUS",
+    "PLATFORMS",
+    "SAFEGUARDS",
+    "OPENSOURCE",
+    "TRUST",
+    "ACTION",
+    "OPTIMISM",
+    "CONCERN",
+    "NIHILISM",
+    "DISRUPTION",
+    "TUMULTUOUS",
+    "CHOICES"
+  ],
+  "moments": [
+    {
+      "id": "01",
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "Bill Gates Reveals Urgency of AI Control",
+      "reason": "Bill Gates emphasizes the urgency of AI control, making the conversation compelling and thought-provoking.",
+      "hook": "Bill Gates: 'I never told anyone this before...'",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "AI",
+        "CONTROL"
+      ],
+      "posted": false
+    },
+    {
+      "id": "02",
+      "start": 170.5,
+      "end": 210.5,
+      "duration": 40.0,
+      "title": "Bill Gates Explains AI Risks and Controls",
+      "reason": "Bill Gates discusses the risks and controls of AI, providing a comprehensive overview that keeps viewers engaged.",
+      "hook": "Bill Gates: 'The risk isn't one model versus another model...'",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "AI",
+        "SOCIETY"
+      ],
+      "posted": false
+    },
+    {
+      "id": "03",
+      "start": 375.0,
+      "end": 425.0,
+      "duration": 50.0,
+      "title": "Bill Gates Warns of 20 Years of AI Disruption",
+      "reason": "Bill Gates' warning about 20 years of AI disruption is a shocking revelation that makes the conversation interesting.",
+      "hook": "Bill Gates said, 'We can't ignore these warnings about AI disruption'",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NEVER",
+        "DISRUPTION"
+      ],
+      "posted": false
+    },
+    {
+      "id": "04",
+      "start": 500.0,
+      "end": 550.0,
+      "duration": 50.0,
+      "title": "Bill Gates Discusses AI and Regulation",
+      "reason": "Bill Gates reveals his concerns about AI regulation and competition, which is surprising and thought-provoking.",
+      "hook": "Bill Gates says we need to stop one company from developing AI.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NEVER",
+        "AI",
+        "HUMANITY"
+      ],
+      "posted": false
+    },
+    {
+      "id": "05",
+      "start": 550.0,
+      "end": 600.0,
+      "duration": 50.0,
+      "title": "AI Industry's Perspective on Regulation",
+      "reason": "The AI industry discusses the challenges of regulating multiple competitors and the government's role in safety, which is surprising and thought-provoking.",
+      "hook": "We need some regulatory effort to stop us.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "AI",
+        "GOVERNMENT",
+        "SAFETY"
+      ],
+      "posted": false
+    },
+    {
+      "id": "06",
+      "start": 1750.0,
+      "end": 1790.0,
+      "duration": 40.0,
+      "title": "Bill Gates' Surprising AI Perspective",
+      "reason": "Bill Gates' revelation about AI's potential and dangers is a surprising and thought-provoking moment.",
+      "hook": "I never told anyone this before...",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "AI",
+        "GOVERNMENT"
+      ],
+      "posted": false
+    },
+    {
+      "id": "07",
+      "start": 1875.0,
+      "end": 1925.0,
+      "duration": 50.0,
+      "title": "Bill Gates on AI: Prepare for 20 Years of Tumult",
+      "reason": "Bill Gates emphasizes the urgency and dramatic impact of AI, highlighting the need for bipartisan action to mitigate its effects.",
+      "hook": "We've done a lot of coverage of data center protests...",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "AI",
+        "DEMOCRACY",
+        "JOBS",
+        "SERIOUS"
+      ],
+      "posted": false
+    },
+    {
+      "id": "08",
+      "start": 2436.0,
+      "end": 2492.0,
+      "duration": 56.0,
+      "title": "The Alignment Problem",
+      "reason": "The urgency of solving the alignment problem is emphasized, making it a compelling moment.",
+      "hook": "Assuming you solve the alignment problem...",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 15,
+        "shorts_potential": 15
+      },
+      "highlight_words": [
+        "AI",
+        "ALIGNMENT",
+        "ABUNDANCE"
+      ],
+      "posted": false
+    },
+    {
+      "id": "09",
+      "start": 2492.0,
+      "end": 2525.0,
+      "duration": 33.0,
+      "title": "Humanity and Abundance",
+      "reason": "The idea of humanity finding purpose in a time of true abundance is a thought-provoking and interesting moment.",
+      "hook": "But assuming you solve the alignment problem...",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 15,
+        "shorts_potential": 15
+      },
+      "highlight_words": [
+        "NEVER",
+        "ABUNDANCE",
+        "CONCERN"
+      ],
+      "posted": false
+    },
+    {
+      "id": "10",
+      "start": 2750.0,
+      "end": 2780.0,
+      "duration": 30.0,
+      "title": "Bill Gates on AI: Cure All Diseases?",
+      "reason": "Bill Gates discusses the potential of AI to eradicate diseases and reduce deaths, which is a surprising and thought-provoking statement.",
+      "hook": "Bill Gates says AI can cure all diseases!",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "AI",
+        "JOBS",
+        "CURE"
+      ],
+      "posted": false
+    },
+    {
+      "id": "11",
+      "start": 3000.0,
+      "end": 3030.0,
+      "duration": 30.0,
+      "title": "Bill Gates on AI: Prepare for 20 Years of Turbulence",
+      "reason": "Bill Gates emphasizes the need for global cooperation and prioritizing issues like poverty and helping poor countries, contrasting this with the lack of urgency in the past.",
+      "hook": "We've done a good job on that, but we've not prioritized it as much as we should have.",
+      "score": 93,
+      "score_breakdown": {
+        "hook": 25,
+        "surprise": 24,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "HUMANITY",
+        "PRIORITIZING",
+        "HELPING"
+      ],
+      "posted": false
+    },
+    {
+      "id": "12",
+      "start": 3250.0,
+      "end": 3306.0,
+      "duration": 56.0,
+      "title": "Bill Gates on AI Safety: 'We Need to Take It Seriously'",
+      "reason": "Bill Gates emphasizes the need to take AI safety seriously, indicating a significant concern about the potential risks of AI.",
+      "hook": "We need to take AI safety seriously, because it's harder than nuclear weapons.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "AI",
+        "SAFETY",
+        "SAFEGUARDS"
+      ],
+      "posted": false
+    },
+    {
+      "id": "13",
+      "start": 3750.0,
+      "end": 3789.0,
+      "duration": 39.0,
+      "title": "Bill Gates on AI: 'There are grave challenges here'",
+      "reason": "Gates highlights the serious challenges in AI development, sparking a thought-provoking discussion.",
+      "hook": "Gates says, 'We're not in the industry, but the government didn't fund this work.'",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "TRUST"
+      ],
+      "posted": false
+    },
+    {
+      "id": "14",
+      "start": 4000.0,
+      "end": 4050.0,
+      "duration": 50.0,
+      "title": "Bill Gates on AI and Futuristic Disruption",
+      "reason": "Bill Gates' concern about AI and the future is surprising and thought-provoking.",
+      "hook": "I'm worried about young people in nihilism.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "AI",
+        "DIGITAL",
+        "NIHILISM"
+      ],
+      "posted": false
+    }
+  ]
+}
