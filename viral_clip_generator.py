@@ -51,12 +51,37 @@ ENV = os.getenv("ENV", "DEV").upper()
 if ENV not in {"DEV", "PROD"}:
     raise ValueError("ENV must be DEV or PROD")
 
-CHANNEL_NAME = "VIRAL_MOMENT"
+CHANNEL = os.getenv("CHANNEL", "VIRAL_MOMENT").upper()
+
+CHANNEL_CONFIG = {
+    "VIRAL_MOMENT": {
+        "queue": BASE_DIR / "viral_moment_queue.csv",
+        "results": BASE_DIR / "results" / "viral-moment",
+        "clips": BASE_DIR / "clips" / "viral-moment",
+    },
+    "VIRAL_REVELATION": {
+        "queue": BASE_DIR / "viral_revelation_queue.csv",
+        "results": BASE_DIR / "results" / "viral-revelation",
+        "clips": BASE_DIR / "clips" / "viral-revelation",
+    },
+}
+
+if CHANNEL not in CHANNEL_CONFIG:
+    raise ValueError(f"Invalid channel: {CHANNEL}")
+
+CONFIG = CHANNEL_CONFIG[CHANNEL]
+
+QUEUE_FILE = CONFIG["queue"]
+RESULTS_DIR = CONFIG["results"]
+CLIPS_DIR = CONFIG["clips"]
+OUTPUT_DIR = CLIPS_DIR
+
+print(f"Selected channel: {CHANNEL}")
+print(f"Queue: {QUEUE_FILE}")
+print(f"Results: {RESULTS_DIR}")
+print(f"Clips: {CLIPS_DIR}")
 
 VIDEO_DIR = BASE_DIR / "videos"
-QUEUE_FILE = BASE_DIR / "viral_moment_queue.csv"
-RESULTS_DIR = BASE_DIR / "results" / "viral-moment"
-OUTPUT_DIR = BASE_DIR / "clips" / "viral-moment"
 
 STICKER_DIR = BASE_DIR / "sticker"
 POP_SFX = BASE_DIR / "sfx" / "pop_click.mp3"
@@ -108,10 +133,10 @@ for folder in [VIDEO_DIR, RESULTS_DIR, OUTPUT_DIR, STICKER_DIR]:
 
 def initialize():
     print("\n" + "=" * 60)
-    print("VIRAL MOMENT CLIP GENERATOR")
+    print("VIRAL CLIP GENERATOR")
     print("=" * 60)
     print(f"Environment: {ENV}")
-    print(f"Channel:     {CHANNEL_NAME}")
+    print(f"Channel:     {CHANNEL}")
     print(f"Queue:       {QUEUE_FILE}")
     print(f"Videos:      {VIDEO_DIR}")
     print(f"Results:     {RESULTS_DIR}")
@@ -468,15 +493,39 @@ def upload_all_clips(service, clip_paths):
     return True
 
 
-def get_result_json(filename):
-    local_path = RESULTS_DIR / filename
+def get_result_json(filename, service=None):
+    local_path = RESULTS_DIR / Path(filename).name
 
     if local_path.exists() and local_path.stat().st_size > 0:
-        print(f"[JSON] Local JSON found: {filename}")
+        print(f"[JSON] Local JSON found: {local_path.name}")
         return local_path
 
-    print(f"[JSON] Local JSON not found: {filename}")
-    return None
+    print(f"[JSON] Local JSON not found: {local_path.name}")
+
+    if ENV != "PROD":
+        return None
+
+    if not service or not GDRIVE_JSON_FOLDER_ID:
+        print("[DRIVE][JSON] Service or JSON folder ID is not configured.")
+        return None
+
+    drive_file = find_drive_file(
+        service,
+        local_path.name,
+        GDRIVE_JSON_FOLDER_ID
+    )
+
+    if not drive_file:
+        print(f"[DRIVE][JSON] JSON not found in Drive: {local_path.name}")
+        return None
+
+    print(f"[DRIVE][JSON] Downloading: {local_path.name}")
+
+    return download_drive_file(
+        service,
+        drive_file["id"],
+        local_path
+    )
 
 # ============================================================
 # SOURCE VIDEO DISCOVERY
@@ -1364,7 +1413,7 @@ def main(json_file=None, video_file=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Generate Viral Moment Shorts from JSON moments."
+        description="Generate channel-specific Shorts from JSON moments."
     )
 
     parser.add_argument(
