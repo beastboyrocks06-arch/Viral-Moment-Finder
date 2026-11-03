@@ -153,7 +153,7 @@
       "id": "08",
       "start": 625.0,
       "end": 676.0,
-      "posted": false,
+      "posted": true,
       "duration": 51.0,
       "title": "Inside Jay Leno's Multi-Million Dollar Supercar Garage",
       "reason": "A detailed description of Jay Leno's impressive car collection.",
@@ -166,7 +166,8 @@
         "clarity": 15,
         "shorts_potential": 15
       },
-      "highlight_words": []
+      "highlight_words": [],
+      "youtube_video_id": "rQT0S-CeQmc"
     },
     {
       "id": "09",
