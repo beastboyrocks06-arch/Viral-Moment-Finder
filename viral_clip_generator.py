@@ -662,22 +662,24 @@ def get_moment_id(moment, index):
 
     return safe_id or str(index)
 
-
 # ============================================================
-# VERTICAL VIDEO
+# VERTICAL VIDEO - FULL FRAME, NO ZOOM OR CROP
 # ============================================================
 
 def make_vertical_video(clip):
-    scale = max(WIDTH / clip.w, HEIGHT / clip.h)
+    # Scale down only when necessary to fit the portrait canvas.
+    # Never enlarge the source video.
+    scale = min(WIDTH / clip.w, HEIGHT / clip.h, 1.0)
+
     resized = clip.resized(scale)
 
-    return resized.cropped(
-        x_center=resized.w / 2,
-        y_center=resized.h / 2,
-        width=WIDTH,
-        height=HEIGHT
-    )
-
+    # Keep the entire landscape frame visible.
+    # Fill the remaining portrait canvas with black.
+    return CompositeVideoClip(
+        [resized.with_position(("center", "center"))],
+        size=(WIDTH, HEIGHT),
+        bg_color=(0, 0, 0)
+    ).with_duration(clip.duration)
 
 # ============================================================
 # CAPTIONS
