@@ -68,14 +68,20 @@ def get_drive():
 def read_queue():
     with open(CSV_FILE, "r", encoding="utf-8-sig", newline="") as file:
         return list(csv.DictReader(file))
-
+    
 def save_queue(rows):
+    fieldnames = list(dict.fromkeys(
+        ["video_title", "video_type", "json_done", "post_done", "clip_done"]
+        + [key for row in rows for key in row.keys()]
+    ))
+
     fd, temp_path = tempfile.mkstemp(dir=BASE_DIR, suffix=".csv")
     try:
         with os.fdopen(fd, "w", encoding="utf-8-sig", newline="") as file:
-            writer = csv.DictWriter(file, fieldnames=["video_title", "json_done", "post_done"])
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(rows)
+
         os.replace(temp_path, CSV_FILE)
     finally:
         if os.path.exists(temp_path):
