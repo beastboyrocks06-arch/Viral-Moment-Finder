@@ -138,3 +138,24 @@ jobs:
           fi
 
           echo "Viral Moment clip generation workflow completed."
+
+        # --------------------------------------------------
+        # SAVE UPDATED QUEUE CSV TO GITHUB
+        # --------------------------------------------------
+
+      - name: Commit updated queue CSV
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add viral_moment_queue.csv
+
+          if git diff --cached --quiet; then
+            echo "[QUEUE] No CSV changes to commit."
+          else
+            git commit -m "Update Viral Moment clip queue [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+            echo "[QUEUE][SUCCESS] CSV updated on GitHub."
+          fi
