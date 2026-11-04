@@ -95,18 +95,23 @@ def valid_json(path):
     except (json.JSONDecodeError, OSError, TypeError):
         return False
 
-def find_drive_file(service, folder_id, filename):
-    print(f"[DRIVE] Searching for: {filename}", flush=True)
-
-    result = service.files().list(
-        q=f"'{folder_id}' in parents and name='{filename}' and trashed=false",
+def find_drive_file(service, folder_id, video_title):
+    print(f"[DRIVE] Searching for: {video_title}", flush=True)
+    safe_title = video_title.replace("\\", "\\\\").replace("'", "\\'")
+    query = (
+        f"'{folder_id}' in parents "
+        f"and name='{safe_title}' "
+        f"and trashed=false"
+    )
+    matches = service.files().list(
+        q=query,
         fields="files(id,name,size)",
         pageSize=10,
         supportsAllDrives=True,
-        includeItemsFromAllDrives=True
+        includeItemsFromAllDrives=True,
     ).execute()
 
-    files = result.get("files", [])
+    files = matches.get("files", [])
     print(f"[DRIVE] Search completed. Matches: {len(files)}", flush=True)
     return files
 
