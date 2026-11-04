@@ -1,0 +1,60 @@
+{
+  "video": "50-youtube-legends-fight-for-1000000.mp4",
+  "video_duration": 1927.44,
+  "total_moments": 2,
+  "highlight_words": [
+    "CHALLENGE",
+    "ALMOST",
+    "ALI",
+    "CHAD",
+    "FINAL",
+    "GAME",
+    "JELLY",
+    "MINECRAFT",
+    "BUILD",
+    "NEVER"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "01"
+    },
+    {
+      "start": 1875.68,
+      "end": 1927.44,
+      "duration": 51.76,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "BUILD",
+        "NEVER"
+      ],
+      "posted": false,
+      "id": "02"
+    }
+  ]
+}
