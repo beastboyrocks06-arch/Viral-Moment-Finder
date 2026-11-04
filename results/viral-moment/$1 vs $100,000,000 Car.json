@@ -173,7 +173,7 @@
       "id": "09",
       "start": 676.0,
       "end": 708.0,
-      "posted": false,
+      "posted": true,
       "duration": 32.0,
       "title": "Examining Jay Leno's $20,000,000 Crown Jewel McLaren",
       "reason": "A detailed description of Jay Leno's impressive car collection.",
@@ -186,7 +186,8 @@
         "clarity": 15,
         "shorts_potential": 15
       },
-      "highlight_words": []
+      "highlight_words": [],
+      "youtube_video_id": "LYGx266_NSQ"
     }
   ]
 }
