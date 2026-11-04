@@ -1,0 +1,135 @@
+{
+  "video": "ex-spacex-engineer-next-phase-of-ai.mkv",
+  "channel": "VIRAL_REVELATION",
+  "video_type": "GENERAL",
+  "video_duration": 1398.0,
+  "total_moments": 5,
+  "highlight_words": [
+    "EASY",
+    "HUMAN",
+    "ENGINEER",
+    "EXPERT",
+    "VISION",
+    "SYSTEMS",
+    "LONGTERM",
+    "DRIVE",
+    "MERITOCRACY",
+    "BUREAUCRACY",
+    "PHYSICS",
+    "IMAGINATION",
+    "BOUNDS",
+    "ELIMINATING",
+    "LANDING",
+    "LEGS",
+    "NEVER",
+    "PROGRESS"
+  ],
+  "moments": [
+    {
+      "id": "01",
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "He Revealed Something Nobody Expected! 😳",
+      "reason": "An unexpected revelation makes this conversation surprising and engaging.",
+      "hook": "I never told anyone this before...",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false
+    },
+    {
+      "id": "02",
+      "start": 520.0,
+      "end": 550.0,
+      "duration": 30.0,
+      "title": "The Power of Human Expertise",
+      "reason": "The conversation highlights how SpaceX's engineers are exceptionally quick to learn and understand different fields, which is surprising and valuable.",
+      "hook": "I never told anyone this before...",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "ENGINEER"
+      ],
+      "posted": false
+    },
+    {
+      "id": "03",
+      "start": 750.0,
+      "end": 800.0,
+      "duration": 50.0,
+      "title": "The Hard Problem of Engineering",
+      "reason": "Explains the intense culture and the importance of results.",
+      "hook": "If you're not in for that kind of intensity, you're not gonna be happy there.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "VISION"
+      ],
+      "posted": false
+    },
+    {
+      "id": "04",
+      "start": 800.0,
+      "end": 850.0,
+      "duration": 50.0,
+      "title": "What Makes a Great Moment?",
+      "reason": "Explains the importance of drive and meritocracy.",
+      "hook": "I think the most indisputable one is results.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "DRIVE",
+        "MERITOCRACY"
+      ],
+      "posted": false
+    },
+    {
+      "id": "05",
+      "start": 850.0,
+      "end": 900.0,
+      "duration": 50.0,
+      "title": "The Culture at SpaceX",
+      "reason": "Explains the meritocracy and Elon's intolerance towards bureaucracy.",
+      "hook": "I think there's a saying amongst engineers there, which was at SpaceX, there's always somebody working harder than you.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "VISION",
+        "MERITOCRACY",
+        "BUREAUCRACY"
+      ],
+      "posted": false
+    }
+  ]
+}
