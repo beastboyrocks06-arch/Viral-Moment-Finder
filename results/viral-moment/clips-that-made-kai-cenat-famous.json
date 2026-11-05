@@ -1,0 +1,30 @@
+{
+  "video": "clips-that-made-kai-cenat-famous.mp4",
+  "video_duration": 763.84,
+  "total_moments": 1,
+  "highlight_words": [
+    "OKAY",
+    "SWINGY"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "01"
+    }
+  ]
+}
