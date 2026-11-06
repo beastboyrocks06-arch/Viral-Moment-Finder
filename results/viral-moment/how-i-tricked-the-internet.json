@@ -1,0 +1,70 @@
+{
+  "video": "how-i-tricked-the-internet.mp4",
+  "video_duration": 582.33,
+  "total_moments": 3,
+  "highlight_words": [
+    "STUDIO",
+    "SHOPIFY",
+    "SIDEKICK",
+    "LIVESTREAM"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "01"
+    },
+    {
+      "start": 375.5,
+      "end": 422.5,
+      "duration": 47.0,
+      "title": "This Discovery Changed Everything! 🥬",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "02"
+    },
+    {
+      "start": 422.5,
+      "end": 473.5,
+      "duration": 51.0,
+      "title": "Speed's Baby Announcement 🎉",
+      "reason": "A baby announcement adds excitement and a sense of achievement.",
+      "hook": "Speed's gonna co-host with me.",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 27,
+        "suspense": 24,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "03"
+    }
+  ]
+}
