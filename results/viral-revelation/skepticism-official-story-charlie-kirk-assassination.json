@@ -1,0 +1,126 @@
+{
+  "video": "skepticism-official-story-charlie-kirk-assassination.mkv",
+  "channel": "VIRAL_REVELATION",
+  "video_type": "GENERAL",
+  "video_duration": 808.96,
+  "total_moments": 5,
+  "highlight_words": [
+    "DISASSEMBLED",
+    "REASSEMBLED",
+    "BULLET",
+    "EXPLODING",
+    "GUN",
+    "DISASSEMBLING",
+    "SPINE",
+    "MICROPHONES",
+    "EXPLOSION"
+  ],
+  "moments": [
+    {
+      "id": "01",
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "He Revealed Something Nobody Expected! 😳",
+      "reason": "An unexpected revelation makes this conversation surprising and engaging.",
+      "hook": "I never told anyone this before...",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false
+    },
+    {
+      "id": "02",
+      "start": 375.0,
+      "end": 424.0,
+      "duration": 49.0,
+      "title": "Exploding Microphone Theory",
+      "reason": "A surprising revelation about microphone placement and gunshot sound analysis.",
+      "hook": "I've heard that theory, but I don't know if that makes sense.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "EXPLODING",
+        "GUN",
+        "MICROPHONES"
+      ],
+      "posted": false
+    },
+    {
+      "id": "03",
+      "start": 424.0,
+      "end": 462.0,
+      "duration": 38.0,
+      "title": "Disassembling a Gun",
+      "reason": "A detailed explanation of disassembling and reassembling a gun.",
+      "hook": "But the thing is like if that's the narrative",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "GUN",
+        "DISASSEMBLING"
+      ],
+      "posted": false
+    },
+    {
+      "id": "04",
+      "start": 625.0,
+      "end": 671.0,
+      "duration": 46.0,
+      "title": "Skepticism: Alleged Microphone Assassination",
+      "reason": "The video presents a conspiracy theory about a microphone assassination, which is surprising and thought-provoking.",
+      "hook": "What if the microphones used in the assassination were not the ones that were allegedly used?",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "MICROPHONES"
+      ],
+      "posted": false
+    },
+    {
+      "id": "05",
+      "start": 671.0,
+      "end": 724.0,
+      "duration": 53.0,
+      "title": "Microphone Assassination: Why the Spine?",
+      "reason": "The video explores the reasoning behind choosing the spine as the target for a shot, which is surprising and thought-provoking.",
+      "hook": "Why would you want to get shot in the spine?",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "BULLET"
+      ],
+      "posted": false
+    }
+  ]
+}
