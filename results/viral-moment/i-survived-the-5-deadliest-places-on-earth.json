@@ -1,0 +1,70 @@
+{
+  "video": "i-survived-the-5-deadliest-places-on-earth.mp4",
+  "video_duration": 802.07,
+  "total_moments": 3,
+  "highlight_words": [
+    "STOP",
+    "TERRIFYING",
+    "SAFETY",
+    "HOME"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "01"
+    },
+    {
+      "start": 375.0,
+      "end": 417.0,
+      "duration": 42.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "02"
+    },
+    {
+      "start": 500.5,
+      "end": 550.5,
+      "duration": 50.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "03"
+    }
+  ]
+}
