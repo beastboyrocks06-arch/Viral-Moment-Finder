@@ -1,0 +1,330 @@
+{
+  "video": "the-end-of-the-future-with-peter-thiel.mkv",
+  "channel": "VIRAL_REVELATION",
+  "video_type": "GENERAL",
+  "video_duration": 2961.44,
+  "total_moments": 12,
+  "highlight_words": [
+    "PARADOXES",
+    "NEVER",
+    "ARGUMENTS",
+    "SUPER",
+    "POWERFUL",
+    "SHAKESPEARE",
+    "HUMANITIES",
+    "STANFORD",
+    "UNIVERSITY",
+    "ALUMNI",
+    "TECHNOLOGY",
+    "ECONOMY",
+    "4",
+    "GROWTH",
+    "CANCEROUS",
+    "TECHNOLOGICAL",
+    "COMMISSION",
+    "DYSTOPIAN",
+    "NUCLEAR",
+    "ENVIRONMENTAL",
+    "RHETORIC",
+    "DUAL",
+    "USE",
+    "DIGNITY",
+    "DANGEROUS",
+    "SELF",
+    "PRECAUTIONARY",
+    "PROGRAM",
+    "FOUR",
+    "STABILIZATION",
+    "DANGER",
+    "TOTALITARIAN",
+    "SCIENCE",
+    "PROGRESS",
+    "DECLINE",
+    "REGRESSIVE",
+    "OPTIMISM",
+    "PESSIMISM",
+    "SLOTH",
+    "ACCEPTANCE",
+    "DENIAL",
+    "STATE",
+    "AVERAGE",
+    "RESPONSIBILITY"
+  ],
+  "moments": [
+    {
+      "id": "01",
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "He Revealed Something Nobody Expected! 😳",
+      "reason": "An unexpected revelation makes this conversation surprising and engaging.",
+      "hook": "I never told anyone this before...",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "TECHNOLOGY",
+        "USE"
+      ],
+      "posted": false
+    },
+    {
+      "id": "02",
+      "start": 375.0,
+      "end": 421.0,
+      "duration": 46.0,
+      "title": "The End of the Future",
+      "reason": "It's a powerful and thought-provoking moment that highlights the controversy surrounding the debate on the future.",
+      "hook": "Dinesh D'Souza's controversial book on a liberal education in 1991.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "STANFORD",
+        "UNIVERSITY"
+      ],
+      "posted": false
+    },
+    {
+      "id": "03",
+      "start": 421.0,
+      "end": 479.0,
+      "duration": 58.0,
+      "title": "The Debate on the Future",
+      "reason": "It's a powerful moment that highlights the debate on the future and the controversy surrounding it.",
+      "hook": "The debate on the future and the controversy surrounding it.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [],
+      "posted": false
+    },
+    {
+      "id": "04",
+      "start": 500.0,
+      "end": 550.0,
+      "duration": 50.0,
+      "title": "The End of the Future",
+      "reason": "Peter Thiel discusses the controversy surrounding the Nobel Prize and the quality of arguments against classical liberalism.",
+      "hook": "The arguments are super powerful on our side, it is like screaming into a hurricane.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NEVER",
+        "ARGUMENTS",
+        "SUPER",
+        "POWERFUL"
+      ],
+      "posted": false
+    },
+    {
+      "id": "05",
+      "start": 1625.0,
+      "end": 1674.0,
+      "duration": 49.0,
+      "title": "Mary Announces New Death with Dignity Strategy",
+      "reason": "Mary's announcement of a new strategy for AI alignment is surprising and thought-provoking.",
+      "hook": "It's obvious at this point that humanity isn't going to solve the alignment problem.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "DIGNITY"
+      ],
+      "posted": false
+    },
+    {
+      "id": "06",
+      "start": 1750.0,
+      "end": 1800.0,
+      "duration": 50.0,
+      "title": "The End of the Future?",
+      "reason": "Exploring the vulnerable world hypothesis and the precautionary principle.",
+      "hook": "Nick Bostrom's article on the vulnerable world hypothesis.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "TECHNOLOGY",
+        "DANGEROUS",
+        "PRECAUTIONARY",
+        "PROGRAM",
+        "FOUR",
+        "STABILIZATION",
+        "SCIENCE"
+      ],
+      "posted": false
+    },
+    {
+      "id": "07",
+      "start": 1800.0,
+      "end": 1850.0,
+      "duration": 50.0,
+      "title": "Precautionary Principle",
+      "reason": "Exploring the precautionary principle and its implications.",
+      "hook": "The precautionary principle and its relevance to our world.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "TECHNOLOGICAL",
+        "PRECAUTIONARY",
+        "FOUR"
+      ],
+      "posted": false
+    },
+    {
+      "id": "08",
+      "start": 1850.0,
+      "end": 1890.0,
+      "duration": 40.0,
+      "title": "Four-Part Program",
+      "reason": "Exploring Nick Bostrom's four-part program for stabilization.",
+      "hook": "The four-part program for stabilizing the world.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "HUMANITIES",
+        "DANGEROUS",
+        "PRECAUTIONARY",
+        "TOTALITARIAN",
+        "SCIENCE",
+        "STATE"
+      ],
+      "posted": false
+    },
+    {
+      "id": "09",
+      "start": 2375.0,
+      "end": 2405.0,
+      "duration": 30.0,
+      "title": "Peter Thiel Explains Why Classical Liberalism Isn't Working",
+      "reason": "Peter Thiel discusses the failure of classical liberalism and the need for a new approach.",
+      "hook": "Peter Thiel says classical liberalism hasn't worked, but there's hope for the future.",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 25,
+        "surprise": 25,
+        "emotion": 15,
+        "clarity": 15,
+        "shorts_potential": 15
+      },
+      "highlight_words": [
+        "NEVER",
+        "STANFORD"
+      ],
+      "posted": false
+    },
+    {
+      "id": "10",
+      "start": 2750.0,
+      "end": 2805.0,
+      "duration": 55.0,
+      "title": "20 Students Doing Better Than College",
+      "reason": "Explains the success of the program and its potential impact.",
+      "hook": "20 students a year can do better than college!",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NEVER",
+        "UNIVERSITY",
+        "USE",
+        "PROGRAM"
+      ],
+      "posted": false
+    },
+    {
+      "id": "11",
+      "start": 2805.0,
+      "end": 2852.0,
+      "duration": 47.0,
+      "title": "Stanford's Healthier Program",
+      "reason": "Explains why Stanford's program is healthier and more focused.",
+      "hook": "Stanford is healthier because of computer science.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "UNIVERSITY",
+        "PROGRAM"
+      ],
+      "posted": false
+    },
+    {
+      "id": "12",
+      "start": 2852.0,
+      "end": 2883.0,
+      "duration": 31.0,
+      "title": "Elite Formation Breakdown",
+      "reason": "Explains the breakdown of elite formation and its impact on society.",
+      "hook": "Elite universities are not leading to something better.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "surprise": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "STANFORD",
+        "UNIVERSITY",
+        "SCIENCE"
+      ],
+      "posted": false
+    }
+  ]
+}
