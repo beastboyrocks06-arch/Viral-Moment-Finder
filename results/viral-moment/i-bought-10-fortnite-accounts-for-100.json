@@ -1,0 +1,101 @@
+{
+  "video": "i-bought-10-fortnite-accounts-for-100.mp4",
+  "video_duration": 1087.2,
+  "total_moments": 4,
+  "highlight_words": [
+    "NEVER",
+    "SCAM",
+    "NOT",
+    "IS",
+    "INSANE"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NOT",
+        "IS"
+      ],
+      "posted": false,
+      "id": "01"
+    },
+    {
+      "start": 300.5,
+      "end": 360.5,
+      "duration": 60.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NOT",
+        "IS",
+        "INSANE"
+      ],
+      "posted": false,
+      "id": "02"
+    },
+    {
+      "start": 375.5,
+      "end": 422.5,
+      "duration": 47.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NEVER",
+        "NOT",
+        "IS"
+      ],
+      "posted": false,
+      "id": "03"
+    },
+    {
+      "start": 830.23,
+      "end": 864.57,
+      "duration": 34.34,
+      "title": "This $75 Account is Not a Scam! 😱",
+      "reason": "The account is not a scam, and the user hopes others don't fall for it.",
+      "hook": "This account is not a scam!",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 25,
+        "suspense": 25,
+        "emotion": 15,
+        "clarity": 10,
+        "shorts_potential": 10
+      },
+      "highlight_words": [],
+      "posted": false,
+      "id": "04"
+    }
+  ]
+}
