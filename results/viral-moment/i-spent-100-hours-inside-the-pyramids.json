@@ -1,0 +1,83 @@
+{
+  "video": "i-spent-100-hours-inside-the-pyramids.mp4",
+  "video_duration": 1302.29,
+  "total_moments": 3,
+  "highlight_words": [
+    "NEVER",
+    "PYRAMID",
+    "CARVINGS",
+    "ANTICHAMBER",
+    "TOMB",
+    "PYRAMIDS",
+    "EGYPTIANS"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "PYRAMID",
+        "PYRAMIDS",
+        "EGYPTIANS"
+      ],
+      "posted": false,
+      "id": "01"
+    },
+    {
+      "start": 250.0,
+      "end": 300.0,
+      "duration": 50.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "TOMB"
+      ],
+      "posted": false,
+      "id": "02"
+    },
+    {
+      "start": 765.0,
+      "end": 809.0,
+      "duration": 44.0,
+      "title": "Ancient Egyptian Wine Making",
+      "reason": "The description of the process of making wine and the historical context of Egyptian wine-making creates intrigue and keeps viewers engaged.",
+      "hook": "Ancient Egyptians made wine using a process that was more advanced than we thought.",
+      "score": 93,
+      "score_breakdown": {
+        "hook": 25,
+        "suspense": 25,
+        "emotion": 18,
+        "clarity": 15,
+        "shorts_potential": 15
+      },
+      "highlight_words": [
+        "TOMB",
+        "PYRAMIDS",
+        "EGYPTIANS"
+      ],
+      "posted": false,
+      "id": "03"
+    }
+  ]
+}
