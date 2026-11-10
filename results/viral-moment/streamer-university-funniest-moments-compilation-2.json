@@ -1,0 +1,195 @@
+{
+  "video": "streamer-university-funniest-moments-compilation-2.mp4",
+  "video_duration": 798.49,
+  "total_moments": 8,
+  "highlight_words": [
+    "NEVER",
+    "S",
+    "SCAM",
+    "SORRY",
+    "I'M",
+    "MATH",
+    "SLIDING",
+    "JAIL",
+    "SO"
+  ],
+  "moments": [
+    {
+      "start": 125.5,
+      "end": 170.5,
+      "duration": 45.0,
+      "title": "This Discovery Changed Everything! 😳",
+      "reason": "A surprising revelation creates curiosity and keeps viewers interested.",
+      "hook": "Nobody expected what happened next.",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "NEVER",
+        "I'M",
+        "SO"
+      ],
+      "posted": false,
+      "id": "01"
+    },
+    {
+      "start": 375.36,
+      "end": 405.36,
+      "duration": 30.0,
+      "title": "I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry",
+      "reason": "The streamer apologizes multiple times, creating a sense of urgency and emotional impact.",
+      "hook": "I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 30,
+        "suspense": 15,
+        "emotion": 25,
+        "clarity": 15,
+        "shorts_potential": 25
+      },
+      "highlight_words": [
+        "SORRY",
+        "I'M"
+      ],
+      "posted": false,
+      "id": "02"
+    },
+    {
+      "start": 405.36,
+      "end": 435.36,
+      "duration": 30.0,
+      "title": "I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry",
+      "reason": "The streamer apologizes multiple times, creating a sense of urgency and emotional impact.",
+      "hook": "I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 30,
+        "suspense": 15,
+        "emotion": 25,
+        "clarity": 15,
+        "shorts_potential": 25
+      },
+      "highlight_words": [
+        "SO"
+      ],
+      "posted": false,
+      "id": "03"
+    },
+    {
+      "start": 435.36,
+      "end": 465.36,
+      "duration": 30.0,
+      "title": "I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry",
+      "reason": "The streamer apologizes multiple times, creating a sense of urgency and emotional impact.",
+      "hook": "I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 30,
+        "suspense": 15,
+        "emotion": 25,
+        "clarity": 15,
+        "shorts_potential": 25
+      },
+      "highlight_words": [
+        "SO"
+      ],
+      "posted": false,
+      "id": "04"
+    },
+    {
+      "start": 465.36,
+      "end": 495.36,
+      "duration": 30.0,
+      "title": "I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry",
+      "reason": "The streamer apologizes multiple times, creating a sense of urgency and emotional impact.",
+      "hook": "I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry, I'm Sorry",
+      "score": 95,
+      "score_breakdown": {
+        "hook": 30,
+        "suspense": 15,
+        "emotion": 25,
+        "clarity": 15,
+        "shorts_potential": 25
+      },
+      "highlight_words": [
+        "I'M"
+      ],
+      "posted": false,
+      "id": "05"
+    },
+    {
+      "start": 500.0,
+      "end": 530.0,
+      "duration": 30.0,
+      "title": "He Said He D-D-G Meets Sierra After Math",
+      "reason": "The setup introduces a surprising event, setting up the narrative.",
+      "hook": "Oh my god, no",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "SORRY",
+        "I'M",
+        "MATH",
+        "SLIDING"
+      ],
+      "posted": false,
+      "id": "06"
+    },
+    {
+      "start": 530.0,
+      "end": 600.0,
+      "duration": 70.0,
+      "title": "Oh My God, No",
+      "reason": "The setup introduces a surprising event, setting up the narrative.",
+      "hook": "Is that for me",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "SORRY",
+        "I'M",
+        "JAIL",
+        "SO"
+      ],
+      "posted": false,
+      "id": "07"
+    },
+    {
+      "start": 600.0,
+      "end": 650.0,
+      "duration": 50.0,
+      "title": "Oh My God, No",
+      "reason": "The setup introduces a surprising event, setting up the narrative.",
+      "hook": "Is that for me",
+      "score": 91,
+      "score_breakdown": {
+        "hook": 24,
+        "suspense": 23,
+        "emotion": 18,
+        "clarity": 13,
+        "shorts_potential": 13
+      },
+      "highlight_words": [
+        "SO"
+      ],
+      "posted": false,
+      "id": "08"
+    }
+  ]
+}
